@@ -4821,7 +4821,7 @@ void game::draw_panels( bool force_draw )
             if( h == -2 ) {
                 h = log_height;
             }
-            h += spacer;
+            h = std::clamp( h + spacer, 0, std::max( 0, TERMY - y ) );
             if( panel.toggle && panel.render() && h > 0 ) {
                 if( panel.always_draw || draw_this_turn ) {
                     panel.draw( u, catacurses::newwin( h, panel.get_width(),

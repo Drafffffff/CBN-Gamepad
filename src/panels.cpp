@@ -1,3 +1,6 @@
+#if defined(TILES)
+#include "controller.h"
+#endif
 #include "panels.h"
 
 #include "action.h"
@@ -2569,10 +2572,32 @@ static std::vector<window_panel> initialize_default_label_panels()
     return ret;
 }
 
+namespace {
+auto initialize_controller_panels() -> std::vector<window_panel>
+{
+    auto panels = std::vector<window_panel>{};
+    panels.emplace_back( draw_limb2, translate_marker( "Limbs" ), 3, 32, true );
+    panels.emplace_back( draw_stats, translate_marker( "Stats" ), 1, 32, true );
+    panels.emplace_back( draw_stealth, translate_marker( "Sound" ), 1, 32, true );
+    panels.emplace_back( draw_time, translate_marker( "Time" ), 1, 32, true );
+    panels.emplace_back( draw_needs_compact, translate_marker( "Needs" ), 3, 32, true );
+    panels.emplace_back( draw_env_compact, translate_marker( "Env" ), 6, 32, true );
+    panels.emplace_back( draw_weightvolume_compact, translate_marker( "Wgt/Vol" ), 2, 32, true );
+    panels.emplace_back( draw_mana_compact, translate_marker( "Mana" ), 1, 32, true, spell_panel );
+    panels.emplace_back( draw_veh_compact, translate_marker( "Vehicle" ), 2, 32, true, veh_panel );
+#if defined(TILES)
+    panels.emplace_back( draw_mminimap, translate_marker( "Map" ), 3, 32, true, default_render, true );
+#endif
+    panels.emplace_back( draw_messages_classic, translate_marker( "Log" ), -2, 32, true );
+    return panels;
+}
+}
+
 static std::map<std::string, std::vector<window_panel>> initialize_default_panel_layouts()
 {
     std::map<std::string, std::vector<window_panel>> ret;
 
+    ret.emplace( "controller-compact", initialize_controller_panels() );
     ret.emplace( translate_marker( "classic" ), initialize_default_classic_panels() );
     ret.emplace( translate_marker( "compact" ), initialize_default_compact_panels() );
     ret.emplace( translate_marker( "labels-narrow" ),
@@ -2623,6 +2648,9 @@ int panel_manager::get_width_left()
 void panel_manager::init()
 {
     load();
+#if defined(TILES)
+    if( gamepad::is_active() && gamepad::compact_layout() ) { current_layout_id = "controller-compact"; }
+#endif
     update_offsets( get_current_layout().begin()->get_width() );
 }
 
