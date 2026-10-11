@@ -2,6 +2,9 @@
 set -euo pipefail
 root="${CBN_GAMEPAD_ROOT:-$HOME/Games/cbn-gamepad}"
 profile="${CBN_GAMEPAD_PROFILE:-$root/profile}"
+if [[ ! -e "$profile/config/options.json" && "$profile" == "$root/profile" ]]; then
+    "$root/install-device.sh" auto
+fi
 mkdir -p "$profile/config" "$profile/save" "$profile/memorial"
 export LD_LIBRARY_PATH="$root/runtime/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 cd "$root/app"

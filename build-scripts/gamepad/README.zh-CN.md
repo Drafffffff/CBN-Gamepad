@@ -27,6 +27,10 @@
 - 游戏窗口不大于 640×480 时，默认选用 32 列紧凑侧栏，保留状态、小地图和日志。底部两行有独立空间。
 - 两台设备使用相同游戏二进制和素材，配置独立。Deck 安装时将小屏预设作为初始 `profile`。
 
+## 便携包首次安装
+
+将包解压到 `~/Games`，执行 `~/Games/cbn-gamepad/install-device.sh small`（Steam Deck）或 `desktop`（Bazzite）。添加 `~/Games/cbn-gamepad/launch.sh` 为 Steam 非 Steam 游戏，名称使用 **CBN Gamepad**。安装器只补齐缺少的配置，已有玩家设置保留。
+
 ## 构建和验证
 
 已在 Fedora 43 容器、Clang 21.1.8、SDL3 环境构建游戏和测试程序。使用绝对编译器路径，避免 CMake 更换编译器时清空其他选项。
