@@ -151,3 +151,17 @@ rg -C2 -i 'speedway' lang/po/ko.po | rg -v '^(#:|--)' | head -n 20
 - When fixing a bug, preserve requested behavior and visible content unless the user explicitly asks to remove it; fix the underlying issue instead of suppressing the affected feature.
 - When reviewing PRs that stop tracking generated or externally pulled files, verify ignore rules by running the generator/pull command or checking `git status --ignored`; do not assume removed tracked files are ignored.
 - When generated or externally pulled files are removed from tracking, verify all CI and release consumers still receive required files or directories.
+
+## Controller port validation
+
+- Desktop input contexts do not expose Android-only getters; use the const controller category accessor and registered-action copy.
+- SDL3 gamepad timestamps use nanoseconds, while SDL_GetTicks uses milliseconds; scheduler deadlines must use SDL_GetTicks consistently.
+- Configure new build directories with absolute compiler paths. Changing compiler paths in a populated CMake cache can reset feature flags; recheck TILES, SOUND and USE_HOME_DIR.
+- BN keeps SDL last_input private; submit controller events through the SDL bridge rather than declaring an extern input buffer.
+- When merging runtime assets, copy soundpack contents directly; a sound directory symlink nested inside itself loads duplicate soundpack definitions.
+- Supplemental translation headers must include Content-Transfer-Encoding: 8bit; BN rejects gettext catalogs that omit it. Reconfigure CMake after adding test source files because its test source glob is not CONFIGURE_DEPENDS.
+
+- `register_action()` does not deduplicate: guard automatic controller-help registration. Reserve LT+Start for help; do not reuse its binding for zoom. SDL3 letter-input fixtures must emit TEXT_INPUT for translated main-menu hotkeys.
+- BN shares its key-name lookup between keyboard and gamepad. Prefix all new gamepad binding names with `PAD_`; unprefixed `A`/`UP` silently overwrite keyboard codes. Test keyboard-name preservation alongside controller bindings.
+- Reserving footer rows can leave fewer than the historical 24 main-menu rows. Clamp the menu window to the current terminal size; `newwin` outside it returns an invalid window and later width arithmetic can divide by zero.
+- Direction prompts reuse `DEFAULTMODE` without registering gameplay actions. Classify menu routing from the registered actions too, or B remains a gameplay grab event instead of cancelling the prompt.

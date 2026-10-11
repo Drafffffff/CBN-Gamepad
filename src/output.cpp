@@ -1,4 +1,7 @@
 #include "output.h"
+#if defined(TILES)
+#include "controller.h"
+#endif
 
 #include <algorithm>
 #include <cerrno>
@@ -209,7 +212,7 @@ void print_colored_text( const catacurses::window &w, point p, nc_color &color,
 
         if( seg[0] == '<' ) {
             const color_tag_parse_result::tag_type type = update_color_stack(
-                        color_stack, seg, color_error );
+                    color_stack, seg, color_error );
             if( type != color_tag_parse_result::non_color_tag ) {
                 seg = rm_prefix( seg );
             }
@@ -638,11 +641,11 @@ void border_helper::draw_border( const catacurses::window &win )
                 const point pbottom( x, end.y - 1 );
                 if( x > beg.x ) {
                     border_connection_map.value()[ptop].left =
-                        border_connection_map.value()[pbottom].left = true;
+                                             border_connection_map.value()[pbottom].left = true;
                 }
                 if( x < end.x - 1 ) {
                     border_connection_map.value()[ptop].right =
-                        border_connection_map.value()[pbottom].right = true;
+                                             border_connection_map.value()[pbottom].right = true;
                 }
             }
             for( int y = beg.y; y < end.y; ++y ) {
@@ -650,11 +653,11 @@ void border_helper::draw_border( const catacurses::window &win )
                 const point pright( end.x - 1, y );
                 if( y > beg.y ) {
                     border_connection_map.value()[pleft].top =
-                        border_connection_map.value()[pright].top = true;
+                                             border_connection_map.value()[pright].top = true;
                 }
                 if( y < end.y - 1 ) {
                     border_connection_map.value()[pleft].bottom =
-                        border_connection_map.value()[pright].bottom = true;
+                                             border_connection_map.value()[pright].bottom = true;
                 }
             }
         }
@@ -1616,6 +1619,14 @@ std::string shortcut_text( nc_color shortcut_color, const std::string &fmt )
         std::string poststring = fmt.substr( pos_end + 1, std::string::npos );
         std::string shortcut = fmt.substr( pos + 1, sep - pos - 1 );
 
+#if defined(TILES)
+        if( gamepad::is_active() ) {
+            // Translated Latin hotkeys are separate from the visible label.
+            const auto latin_hotkey = std::ranges::all_of( shortcut, []( unsigned char ch ) { return ch < 128; } );
+            return prestring + ( latin_hotkey && !poststring.empty() &&
+                                 static_cast<unsigned char>( poststring.front() ) >= 128 ? "" : shortcut ) + poststring;
+        }
+#endif
         return prestring + colorize( shortcut, shortcut_color ) + poststring;
     }
 
@@ -2097,7 +2108,7 @@ std::string string_from_int( const catacurses::chtype ch )
 
 nc_color msgtype_to_color( const game_message_type type, const bool bOldMsg )
 {
-    static const std::map<game_message_type, std::pair<nc_color, nc_color>> colors {
+    static const std::map<game_message_type, std::pair<nc_color, nc_color >> colors {
         {m_good,     {c_light_green, c_green}},
         {m_bad,      {c_light_red,   c_red}},
         {m_mixed,    {c_pink,    c_magenta}},
@@ -2151,7 +2162,8 @@ std::string format_volume( const units::volume &volume, int width, bool *out_tru
     if( width < 0 ) {
         // left-justify the specified width
         return string_format( "%-*.*f", std::abs( width ), scale, value );
-    } else if( width > 0 ) {
+    }
+    else if( width > 0 ) {
         // right-justify the specified width
         return string_format( "%*.*f", width, scale, value );
     } else {

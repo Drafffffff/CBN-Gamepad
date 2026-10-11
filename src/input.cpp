@@ -1,3 +1,6 @@
+#if defined(TILES)
+#include "controller.h"
+#endif
 #include "input.h"
 
 #include <algorithm>
@@ -415,6 +418,72 @@ void input_manager::init_keycode_mapping()
         add_keycode_pair( KEY_F( i ), string_format( "F%d", i ) );
     }
 
+
+#if defined(TILES)
+    add_gamepad_keycode_pair( PAD_LS_LEFT, "PAD_LS_LEFT" );
+    add_gamepad_keycode_pair( PAD_LS_RIGHT, "PAD_LS_RIGHT" );
+    add_gamepad_keycode_pair( PAD_LS_UP, "PAD_LS_UP" );
+    add_gamepad_keycode_pair( PAD_LS_DOWN, "PAD_LS_DOWN" );
+    add_gamepad_keycode_pair( PAD_LS_UP_RIGHT, "PAD_LS_UP_RIGHT" );
+    add_gamepad_keycode_pair( PAD_LS_DOWN_RIGHT, "PAD_LS_DOWN_RIGHT" );
+    add_gamepad_keycode_pair( PAD_LS_UP_LEFT, "PAD_LS_UP_LEFT" );
+    add_gamepad_keycode_pair( PAD_LS_DOWN_LEFT, "PAD_LS_DOWN_LEFT" );
+    add_gamepad_keycode_pair( PAD_RS_LEFT, "PAD_RS_LEFT" );
+    add_gamepad_keycode_pair( PAD_RS_RIGHT, "PAD_RS_RIGHT" );
+    add_gamepad_keycode_pair( PAD_RS_UP, "PAD_RS_UP" );
+    add_gamepad_keycode_pair( PAD_RS_DOWN, "PAD_RS_DOWN" );
+    add_gamepad_keycode_pair( PAD_RS_UP_RIGHT, "PAD_RS_UP_RIGHT" );
+    add_gamepad_keycode_pair( PAD_RS_DOWN_RIGHT, "PAD_RS_DOWN_RIGHT" );
+    add_gamepad_keycode_pair( PAD_RS_UP_LEFT, "PAD_RS_UP_LEFT" );
+    add_gamepad_keycode_pair( PAD_RS_DOWN_LEFT, "PAD_RS_DOWN_LEFT" );
+    add_gamepad_keycode_pair( PAD_A, "PAD_A" );
+    add_gamepad_keycode_pair( PAD_B, "PAD_B" );
+    add_gamepad_keycode_pair( PAD_X, "PAD_X" );
+    add_gamepad_keycode_pair( PAD_Y, "PAD_Y" );
+    add_gamepad_keycode_pair( PAD_LB, "PAD_LB" );
+    add_gamepad_keycode_pair( PAD_RB, "PAD_RB" );
+    add_gamepad_keycode_pair( PAD_LT, "PAD_LT" );
+    add_gamepad_keycode_pair( PAD_RT, "PAD_RT" );
+    add_gamepad_keycode_pair( PAD_LS, "PAD_LS" );
+    add_gamepad_keycode_pair( PAD_RS, "PAD_RS" );
+    add_gamepad_keycode_pair( PAD_UP, "PAD_UP" );
+    add_gamepad_keycode_pair( PAD_DOWN, "PAD_DOWN" );
+    add_gamepad_keycode_pair( PAD_LEFT, "PAD_LEFT" );
+    add_gamepad_keycode_pair( PAD_RIGHT, "PAD_RIGHT" );
+    add_gamepad_keycode_pair( PAD_START, "PAD_START" );
+    add_gamepad_keycode_pair( PAD_BACK, "PAD_BACK" );
+    add_gamepad_keycode_pair( PAD_ALT_A, "PAD_ALT_A" );
+    add_gamepad_keycode_pair( PAD_ALT_B, "PAD_ALT_B" );
+    add_gamepad_keycode_pair( PAD_ALT_X, "PAD_ALT_X" );
+    add_gamepad_keycode_pair( PAD_ALT_Y, "PAD_ALT_Y" );
+    add_gamepad_keycode_pair( PAD_ALT_RB, "PAD_ALT_RB" );
+    add_gamepad_keycode_pair( PAD_ALT_LB, "PAD_ALT_LB" );
+    add_gamepad_keycode_pair( PAD_ALT_RT, "PAD_ALT_RT" );
+    add_gamepad_keycode_pair( PAD_ALT_LS, "PAD_ALT_LS" );
+    add_gamepad_keycode_pair( PAD_ALT_RS, "PAD_ALT_RS" );
+    add_gamepad_keycode_pair( PAD_ALT_UP, "PAD_ALT_UP" );
+    add_gamepad_keycode_pair( PAD_ALT_DOWN, "PAD_ALT_DOWN" );
+    add_gamepad_keycode_pair( PAD_ALT_LEFT, "PAD_ALT_LEFT" );
+    add_gamepad_keycode_pair( PAD_ALT_RIGHT, "PAD_ALT_RIGHT" );
+    add_gamepad_keycode_pair( PAD_ALT_START, "PAD_ALT_START" );
+    add_gamepad_keycode_pair( PAD_ALT_BACK, "PAD_ALT_BACK" );
+    add_gamepad_keycode_pair( PAD_L_RADIAL_N, "PAD_L_RADIAL_N" );
+    add_gamepad_keycode_pair( PAD_L_RADIAL_NE, "PAD_L_RADIAL_NE" );
+    add_gamepad_keycode_pair( PAD_L_RADIAL_E, "PAD_L_RADIAL_E" );
+    add_gamepad_keycode_pair( PAD_L_RADIAL_SE, "PAD_L_RADIAL_SE" );
+    add_gamepad_keycode_pair( PAD_L_RADIAL_S, "PAD_L_RADIAL_S" );
+    add_gamepad_keycode_pair( PAD_L_RADIAL_SW, "PAD_L_RADIAL_SW" );
+    add_gamepad_keycode_pair( PAD_L_RADIAL_W, "PAD_L_RADIAL_W" );
+    add_gamepad_keycode_pair( PAD_L_RADIAL_NW, "PAD_L_RADIAL_NW" );
+    add_gamepad_keycode_pair( PAD_R_RADIAL_N, "PAD_R_RADIAL_N" );
+    add_gamepad_keycode_pair( PAD_R_RADIAL_NE, "PAD_R_RADIAL_NE" );
+    add_gamepad_keycode_pair( PAD_R_RADIAL_E, "PAD_R_RADIAL_E" );
+    add_gamepad_keycode_pair( PAD_R_RADIAL_SE, "PAD_R_RADIAL_SE" );
+    add_gamepad_keycode_pair( PAD_R_RADIAL_S, "PAD_R_RADIAL_S" );
+    add_gamepad_keycode_pair( PAD_R_RADIAL_SW, "PAD_R_RADIAL_SW" );
+    add_gamepad_keycode_pair( PAD_R_RADIAL_W, "PAD_R_RADIAL_W" );
+    add_gamepad_keycode_pair( PAD_R_RADIAL_NW, "PAD_R_RADIAL_NW" );
+#endif
     add_gamepad_keycode_pair( JOY_LEFT,      translate_marker_context( "key name", "JOY_LEFT" ) );
     add_gamepad_keycode_pair( JOY_RIGHT,     translate_marker_context( "key name", "JOY_RIGHT" ) );
     add_gamepad_keycode_pair( JOY_UP,        translate_marker_context( "key name", "JOY_UP" ) );
@@ -565,7 +634,7 @@ const action_attributes &input_manager::get_action_attributes(
 translation input_manager::get_default_action_name( const std::string &action_id ) const
 {
     const t_action_contexts::const_iterator default_action_context = action_contexts.find(
-                default_context_id );
+            default_context_id );
     if( default_action_context == action_contexts.end() ) {
         return no_translation( action_id );
     }
@@ -749,7 +818,7 @@ std::vector<char> input_context::keys_bound_to( const std::string &action_descri
 {
     std::vector<char> result;
     const std::vector<input_event> &events = inp_mngr.get_input_for_action( action_descriptor,
-            category );
+        category );
     for( const auto &events_event : events ) {
         // Ignore multi-key input and non-keyboard input
         // TODO: fix for Unicode.
@@ -807,13 +876,16 @@ std::string input_context::get_desc( const std::string &action_descriptor,
                                      const unsigned int max_limit,
                                      const input_context::input_event_filter &evt_filter ) const
 {
+#if defined(TILES)
+    if( gamepad::is_active() ) { return gamepad::action_hint( *this, action_descriptor ); }
+#endif
     if( action_descriptor == "ANY_INPUT" ) {
         return "(*)"; // * for wildcard
     }
 
     bool is_local = false;
     const std::vector<input_event> &events = inp_mngr.get_input_for_action( action_descriptor,
-            category, &is_local );
+        category, &is_local );
 
     if( events.empty() ) {
         return is_local ? _( "Unbound locally!" ) : _( "Unbound globally!" );
@@ -919,6 +991,9 @@ std::string input_context::get_desc(
 std::string input_context::describe_key_and_name( const std::string &action_descriptor,
         const input_context::input_event_filter &evt_filter ) const
 {
+#if defined(TILES)
+    if( gamepad::is_active() ) { return get_action_name( action_descriptor ); }
+#endif
     return get_desc( action_descriptor, get_action_name( action_descriptor ), evt_filter );
 }
 
@@ -930,6 +1005,14 @@ const std::string &input_context::handle_input()
 const std::string &input_context::handle_input( const int timeout )
 {
     ZoneScopedN( "input_context_handle_input" );
+#if defined(TILES)
+    if( gamepad::is_active() && category != "GAMEPAD_HELP" &&
+        std::ranges::find( registered_actions, "HELP_KEYBINDINGS" ) == registered_actions.end() ) {
+        register_action( "HELP_KEYBINDINGS" );
+    }
+    const auto controller_context = gamepad::context_scope( *this );
+    auto controller_action = std::string{};
+#endif
     const auto old_timeout = inp_mngr.get_timeout();
     if( timeout >= 0 ) {
         inp_mngr.set_timeout( timeout );
@@ -946,8 +1029,18 @@ const std::string &input_context::handle_input( const int timeout )
             break;
         }
 
+#if defined(TILES)
+        controller_action = gamepad::take_action( *this );
+#endif
         const auto &action = [&]() -> const std::string & {
             ZoneScopedN( "input_context_input_to_action" );
+#if defined(TILES)
+            if( !controller_action.empty() ) {
+                for( const auto &registered : registered_actions ) {
+                    if( registered == controller_action ) { return registered; }
+                }
+            }
+#endif
             return input_to_action( next_action );
         }();
 
@@ -1095,6 +1188,9 @@ static const std::map<fallback_action, int> fallback_keys = {
 
 action_id input_context::display_menu( const bool permit_execute_action )
 {
+#if defined(TILES)
+    if( gamepad::show_bindings( *this ) ) { return ACTION_NULL; }
+#endif
     action_id action_to_execute = ACTION_NULL;
 
     // Shamelessly stolen from help.cpp
@@ -1159,8 +1255,8 @@ action_id input_context::display_menu( const bool permit_execute_action )
         legwidth = width - filter_pos.x * 2 - BORDER_SPACE;
         // +1 for end-of-text cursor
         spopup.window( w_help, filter_pos, filter_pos.x + legwidth + 1 )
-        .max_length( legwidth )
-        .context( ctxt );
+              .max_length( legwidth )
+              .context( ctxt );
         ui.position_from_window( w_help );
     };
     recalc_size( ui );
@@ -1526,7 +1622,7 @@ std::string input_context::get_action_name( const std::string &action_id ) const
     // this context that is masking the global hotkey. Fallback to the global
     // hotkey's name.
     const action_attributes &default_attributes = inp_mngr.get_action_attributes( action_id,
-            default_context_id );
+        default_context_id );
     if( !default_attributes.name.empty() ) {
         return default_attributes.name.translated();
     }
@@ -1552,6 +1648,12 @@ std::string input_context::press_x( const std::string &action_id,
                                     const std::string &key_bound_pre,
                                     const std::string &key_bound_suf, const std::string &key_unbound ) const
 {
+#if defined(TILES)
+    if( gamepad::is_active() ) {
+        const auto hint = gamepad::action_hint( *this, action_id );
+        return hint.empty() ? get_action_name( action_id ) : hint;
+    }
+#endif
     if( action_id == "ANY_INPUT" ) {
         return _( "any key" );
     }
@@ -1559,7 +1661,7 @@ std::string input_context::press_x( const std::string &action_id,
         return _( "mouse movement" );
     }
     const input_manager::t_input_event_list &events = inp_mngr.get_input_for_action( action_id,
-            category );
+        category );
     if( events.empty() ) {
         return key_unbound;
     }

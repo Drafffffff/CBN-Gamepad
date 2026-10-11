@@ -1,0 +1,112 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"MIME-Version: 1.0\n"
+"Language: zh_CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Controller"
+msgstr "手柄布局"
+
+msgid "Keyboard"
+msgstr "键盘布局"
+
+msgid "LB / RB: switch view"
+msgstr "LB / RB：切换布局"
+
+msgid "Option shortcuts"
+msgstr "选项快捷键"
+
+msgid "Binding is shadowed by the active input routing"
+msgstr "绑定被当前输入路由遮蔽"
+
+msgid "No direct controller binding"
+msgstr "无直接手柄绑定"
+
+msgid "Navigate"
+msgstr "导航"
+
+msgid "Move"
+msgstr "移动"
+
+msgid "Left radial"
+msgstr "左轮盘"
+
+msgid "Right radial"
+msgstr "右轮盘"
+
+#, c-format
+msgid "Release to: %s"
+msgstr "松开执行：%s"
+
+msgid "Controller shortcuts"
+msgstr "全部手柄按键"
+
+msgid "Switch layout"
+msgstr "切换布局"
+
+msgid "Interact with tile"
+msgstr "交互"
+
+msgid "Explore"
+msgstr "探索"
+
+msgid "Items"
+msgstr "物品"
+
+msgid "Survival"
+msgstr "生存"
+
+msgid "Information"
+msgstr "信息"
+
+msgid "Radial menu"
+msgstr "动作轮盘"
+
+msgid "Cancelled — release LT"
+msgstr "已取消，请松开 LT"
+
+msgid "Change category"
+msgstr "切换分类"
+
+msgid "Select action"
+msgstr "选择动作"
+
+msgid "Center stick, then select"
+msgstr "摇杆回中后选择"
+
+msgid "Action radial"
+msgstr "动作轮盘"
+
+msgid "Release LT to execute"
+msgstr "松开 LT 执行"
+
+msgid "Release LT to cancel"
+msgstr "松开 LT 取消"
+
+msgid "Ⓑ Cancel · LB / RB Change category"
+msgstr "Ⓑ 取消 · LB / RB 切换分类"
+
+msgid "Define Point of Interest"
+msgstr "设置地标"
+
+msgctxt "controller hint"
+msgid "Wheel"
+msgstr "轮盘"
+
+msgctxt "controller hint"
+msgid "Bindings"
+msgstr "按键"
+
+msgid "Controller compact"
+msgstr "手柄紧凑"
+
+msgid "Keyboard bindings"
+msgstr "键盘按键设置"
+
+msgid "LT + ☰: shortcuts · Ⓐ: select · Ⓑ: back"
+msgstr "LT + ☰ 按键列表 · Ⓐ 选择 · Ⓑ 返回"
+
+msgid "Advanced Inventory Manager"
+msgstr "高级物品管理"

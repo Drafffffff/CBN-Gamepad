@@ -438,8 +438,8 @@ void main_menu::init_windows()
     int extra_h = ( ( TERMY - FULL_SCREEN_HEIGHT ) / 2 ) - 1;
     extra_w = ( extra_w > 0 ? extra_w : 0 );
     extra_h = ( extra_h > 0 ? extra_h : 0 );
-    const int total_w = FULL_SCREEN_WIDTH + extra_w;
-    const int total_h = FULL_SCREEN_HEIGHT + extra_h;
+    const auto total_w = std::min( TERMX, FULL_SCREEN_WIDTH + extra_w );
+    const auto total_h = std::min( TERMY, FULL_SCREEN_HEIGHT + extra_h );
 
     // position of window within main display
     const point p0( ( TERMX - total_w ) / 2, ( TERMY - total_h ) / 2 );

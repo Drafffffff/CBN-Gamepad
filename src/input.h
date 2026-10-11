@@ -768,6 +768,8 @@ class input_context
         std::vector<std::string> filter_strings_by_phrase( const std::vector<std::string> &strings,
                 const std::string &phrase ) const;
     public:
+        auto controller_category() const -> const std::string & { return category; } // *NOPAD*
+
         std::vector<std::string> get_registered_actions_copy() const {
             return registered_actions;
         }

@@ -20,6 +20,7 @@
 #    include "get_version.h"
 #    include "hash_utils.h"
 #    include "input.h"
+#    include "controller.h"
 #    include "json.h"
 #    include "make_static.h"
 #    include "map/mapbuffer.h"
@@ -275,7 +276,8 @@ static void WinCreate()
         SDL_GetWindowSize( ::window.get(), &WindowWidth, &WindowHeight );
         // Ignore previous values, use the whole window, but nothing more.
         TERMINAL_WIDTH = WindowWidth / fontwidth / scaling_factor;
-        TERMINAL_HEIGHT = WindowHeight / fontheight / scaling_factor;
+        TERMINAL_HEIGHT = std::max( 16,
+                                    WindowHeight / fontheight / scaling_factor - ( gamepad::is_active() ? 2 : 0 ) );
     }
 #endif
     // Initialize framebuffer caches
@@ -330,7 +332,7 @@ static void WinCreate()
             }
             if( !SetupRenderTarget() ) {
                 dbg( DL::Error ) << "Failed to initialize display buffer under accelerated rendering, "
-                                 "falling back to software rendering.";
+                                    "falling back to software rendering.";
                 software_renderer = true;
                 display_buffer.reset();
                 renderer.reset();
@@ -368,6 +370,9 @@ static void WinCreate()
         SDL_ShowCursor();
     }
 
+    gamepad::init();
+    if( gamepad::is_active() ) { TERMINAL_HEIGHT = std::max( 16, TERMINAL_HEIGHT - 2 ); }
+
     // Initialize joysticks.
     int numjoy = 0;
     SDL_JoystickID *joystick_ids = SDL_GetJoysticks( &numjoy );
@@ -375,7 +380,7 @@ static void WinCreate()
     if( get_option<bool>( "ENABLE_JOYSTICK" ) && numjoy >= 1 ) {
         if( numjoy > 1 ) {
             dbg( DL::Warn ) << "You have more than one gamepads/joysticks plugged in, "
-                            "only the first will be used.";
+                               "only the first will be used.";
         }
         joystick = SDL_OpenJoystick( joystick_ids[0] );
         printErrorIf( joystick == nullptr, "SDL_OpenJoystick failed" );
@@ -406,6 +411,7 @@ static void WinDestroy()
     touch_joystick.reset();
 #endif
 
+    gamepad::quit();
     shutdown_sound();
     tilecontext.reset();
 
@@ -500,6 +506,8 @@ SDL_FRect get_android_render_rect( float DisplayBufferWidth, float DisplayBuffer
 
 #endif
 
+namespace { auto draw_controller_overlay() -> void; }
+
 void refresh_display()
 {
     needupdate = false;
@@ -525,6 +533,7 @@ void refresh_display()
     draw_quick_shortcuts();
     draw_virtual_joystick();
 #endif
+    draw_controller_overlay();
     SDL_RenderPresent( renderer.get() );
     SetRenderTarget( renderer, display_buffer );
 }
@@ -652,8 +661,8 @@ void clear_window_area( const catacurses::window &win_ )
                     win->width * fontwidth, win->height * fontheight, color_as_sdl( catacurses::black ) );
 }
 
-static std::optional<std::pair<tripoint_abs_omt, std::string>> get_mission_arrow(
-            const inclusive_cuboid<tripoint_abs_omt> &overmap_area, const tripoint_abs_omt &center )
+static std::optional<std::pair<tripoint_abs_omt, std::string >> get_mission_arrow(
+    const inclusive_cuboid<tripoint_abs_omt> &overmap_area, const tripoint_abs_omt &center )
 {
     const auto *mission = get_avatar().get_active_mission();
     const bool custom_waypoint_valid = get_avatar().get_custom_mission_target() !=
@@ -686,7 +695,7 @@ static std::optional<std::pair<tripoint_abs_omt, std::string>> get_mission_arrow
     }
 
     const std::vector<tripoint_abs_omt> traj = line_to( center,
-            tripoint_abs_omt( mission_target.xy(), center.z() ) );
+        tripoint_abs_omt( mission_target.xy(), center.z() ) );
 
     if( traj.empty() ) {
         debugmsg( "Failed to gen overmap mission trajectory %s %s",
@@ -886,8 +895,7 @@ void cata_tiles::draw_om( point dest, const tripoint_abs_omt &center_abs_omt, bo
     };
     const auto has_map_label = [&]( const tripoint_abs_omt & pos ) -> bool {
         if( const auto player_label = overmap_label_note::extract_label( ACTIVE_OVERMAP_BUFFER.note( pos ) );
-            player_label.has_value() && !player_label->empty() )
-        {
+            player_label.has_value() && !player_label->empty() ) {
             return true;
         }
 
@@ -903,7 +911,7 @@ void cata_tiles::draw_om( point dest, const tripoint_abs_omt &center_abs_omt, bo
 
     // Cache display_oter substitution strings for the active region.
     const regional_settings &active_region_settings = ACTIVE_OVERMAP_BUFFER.get_settings(
-                center_abs_omt );
+            center_abs_omt );
     const bool om_has_display_oter = !active_region_settings.display_oter.is_empty();
     const std::string om_default_oter_str = active_region_settings.default_oter.str();
     const std::string om_display_oter_str = om_has_display_oter
@@ -998,8 +1006,7 @@ void cata_tiles::draw_om( point dest, const tripoint_abs_omt &center_abs_omt, bo
                 }
                 const auto fallback_horde_id = [&]( const tripoint_abs_omt & pos ) -> std::string {
                     const auto groups = ACTIVE_OVERMAP_BUFFER.monsters_at( pos );
-                    const auto horde_it = std::ranges::find_if( groups, []( const mongroup * mgp )
-                    {
+                    const auto horde_it = std::ranges::find_if( groups, []( const mongroup * mgp ) {
                         return mgp != nullptr && mgp->horde && mgp->type.is_valid();
                     } );
                     if( horde_it == groups.end() )
@@ -1010,16 +1017,15 @@ void cata_tiles::draw_om( point dest, const tripoint_abs_omt &center_abs_omt, bo
                     const mongroup *mgp = *horde_it;
                     const MonsterGroup &group = mgp->type.obj();
                     const auto default_id = group.defaultMonster.is_valid()
-                    ? group.defaultMonster.str()
-                    : std::string( "mon_zombie" );
+                        ? group.defaultMonster.str()
+                        : std::string( "mon_zombie" );
                     if( group.monsters.empty() )
                     {
                         return default_id;
                     }
 
                     const auto best_entry = std::ranges::max_element( group.monsters, []( const auto & lhs,
-                            const auto & rhs )
-                    {
+                    const auto & rhs ) {
                         return lhs.frequency < rhs.frequency;
                     } );
                     if( best_entry == group.monsters.end() )
@@ -1189,8 +1195,8 @@ void cata_tiles::draw_om( point dest, const tripoint_abs_omt &center_abs_omt, bo
         // reduce the area where the map cursor is drawn so it doesn't get cut off
         inclusive_cuboid<tripoint_abs_omt> map_cursor_area = overmap_area;
         map_cursor_area.p_max.y()--;
-        const std::optional<std::pair<tripoint_abs_omt, std::string>> mission_arrow =
-                    get_mission_arrow( map_cursor_area, center_abs_omt );
+        const std::optional<std::pair<tripoint_abs_omt, std::string >> mission_arrow =
+            get_mission_arrow( map_cursor_area, center_abs_omt );
         if( mission_arrow ) {
             const tile_search_params tile { mission_arrow->second, C_NONE, empty_string, 0, 0 };
             draw_from_id_string(
@@ -1289,13 +1295,13 @@ void cata_tiles::draw_om( point dest, const tripoint_abs_omt &center_abs_omt, bo
         }
     }
 
-    std::vector<std::pair<nc_color, std::string>> notes_window_text;
+    std::vector<std::pair<nc_color, std::string >> notes_window_text;
 
     if( uistate.overmap_show_map_notes ) {
         const std::string &note_text = ACTIVE_OVERMAP_BUFFER.note( center_abs_omt );
         if( !note_text.empty() && !overmap_label_note::is_label_only( note_text ) ) {
             const std::tuple<char, nc_color, size_t> note_info = overmap_ui::get_note_display_info(
-                        note_text );
+                    note_text );
             const size_t pos = std::get<2>( note_info );
             if( pos != std::string::npos ) {
                 const auto display_note_text =
@@ -1362,7 +1368,7 @@ void cata_tiles::draw_om( point dest, const tripoint_abs_omt &center_abs_omt, bo
             std::stack<nc_color> color_stack;
             nc_color default_color = std::get<0>( line );
             color_stack.push( default_color );
-            std::vector<std::tuple<nc_color, std::string>> colored_lines;
+            std::vector<std::tuple<nc_color, std::string >> colored_lines;
 
             draw_point.x = starting_x;
 
@@ -1374,7 +1380,7 @@ void cata_tiles::draw_om( point dest, const tripoint_abs_omt &center_abs_omt, bo
 
                 if( seg[0] == '<' ) {
                     const color_tag_parse_result::tag_type type = update_color_stack(
-                                color_stack, seg, report_color_error::no );
+                            color_stack, seg, report_color_error::no );
                     if( type != color_tag_parse_result::non_color_tag ) {
                         seg = rm_prefix( seg );
                     }
@@ -1419,7 +1425,7 @@ static bool draw_window( Font_Ptr &font, const catacurses::window &w, point offs
     cata_cursesport::WINDOW *const win = w.get<cata_cursesport::WINDOW>();
     //Keeping track of the last drawn window
     const cata_cursesport::WINDOW *winBuffer = static_cast<cata_cursesport::WINDOW *>
-            ( ::winBuffer.lock().get() );
+        ( ::winBuffer.lock().get() );
     if( !fontScaleBuffer ) {
         fontScaleBuffer = tilecontext->get_tile_width();
     }
@@ -1811,7 +1817,7 @@ static int end_alt_code()
 static int HandleDPad()
 {
     // Check if we have a gamepad d-pad event.
-    if( SDL_GetJoystickHat( joystick, 0 ) != SDL_HAT_CENTERED ) {
+    if( !gamepad::is_active() && SDL_GetJoystickHat( joystick, 0 ) != SDL_HAT_CENTERED ) {
         // When someone tries to press a diagonal, they likely will
         // press a single direction first. Wait a few milliseconds to
         // give them time to press both of the buttons for the diagonal.
@@ -2111,7 +2117,8 @@ bool handle_resize( int w, int h )
         WindowWidth = w;
         WindowHeight = h;
         TERMINAL_WIDTH = WindowWidth / fontwidth / scaling_factor;
-        TERMINAL_HEIGHT = WindowHeight / fontheight / scaling_factor;
+        TERMINAL_HEIGHT = std::max( 16,
+                                    WindowHeight / fontheight / scaling_factor - ( gamepad::is_active() ? 2 : 0 ) );
         need_invalidate_framebuffers = true;
         catacurses::stdscr = catacurses::newwin( TERMINAL_HEIGHT, TERMINAL_WIDTH, point_zero );
         throwErrorIf( !SetupRenderTarget(), "SetupRenderTarget failed" );
@@ -2301,7 +2308,7 @@ bool ignore_action_for_quick_shortcuts( const std::string &action )
              || action == "MOVE_ARMOR" // maps to ENTER
              || action == "ANY_INPUT"
              || action ==
-             "DELETE_TEMPLATE" // strictly we shouldn't have this one, but I don't like seeing the "d" on the main menu by default. :)
+    "DELETE_TEMPLATE" // strictly we shouldn't have this one, but I don't like seeing the "d" on the main menu by default. :)
            );
 }
 
@@ -2759,9 +2766,9 @@ void update_finger_repeat_delay()
                     0.0f, 1.0f );
     finger_repeat_delay = lerp( std::pow( t, get_option<float>( "ANDROID_SENSITIVITY_POWER" ) ),
                                 static_cast<Uint64>( std::max( get_option<int>( "ANDROID_REPEAT_DELAY_MIN" ),
-                                        get_option<int>( "ANDROID_REPEAT_DELAY_MAX" ) ) ),
+                                    get_option<int>( "ANDROID_REPEAT_DELAY_MAX" ) ) ),
                                 static_cast<Uint64>( std::min( get_option<int>( "ANDROID_REPEAT_DELAY_MIN" ),
-                                        get_option<int>( "ANDROID_REPEAT_DELAY_MAX" ) ) ) );
+                                    get_option<int>( "ANDROID_REPEAT_DELAY_MAX" ) ) ) );
 }
 
 // TODO: Is there a better way to detect when string entry is allowed?
@@ -3216,11 +3223,17 @@ static void CheckMessages()
 #endif
 
     last_input = input_event();
+    gamepad::tick();
 
     std::optional<point> resize_dims;
     bool render_target_reset = false;
 
     while( SDL_PollEvent( &ev ) ) {
+        if( gamepad::handle_event( ev ) ) { needupdate = true; continue; }
+        if( gamepad::radial_input_captured() && ( ev.type == SDL_EVENT_KEY_DOWN ||
+                ev.type == SDL_EVENT_KEY_UP || ev.type == SDL_EVENT_TEXT_INPUT ||
+                ev.type == SDL_EVENT_MOUSE_MOTION || ev.type == SDL_EVENT_MOUSE_BUTTON_UP ||
+                ev.type == SDL_EVENT_MOUSE_BUTTON_DOWN || ev.type == SDL_EVENT_MOUSE_WHEEL ) ) { continue; }
         switch( ev.type ) {
 #if defined(__ANDROID__)
             // SDL will send a focus lost event whenever the app loses focus (eg. lock screen, switch app focus etc.)
@@ -3390,7 +3403,7 @@ static void CheckMessages()
             }
             break;
             case SDL_EVENT_JOYSTICK_BUTTON_DOWN:
-                last_input = input_event( ev.jbutton.button, input_event_t::keyboard );
+                if( !gamepad::is_active() ) { last_input = input_event( ev.jbutton.button, input_event_t::gamepad ); }
                 break;
             case SDL_EVENT_JOYSTICK_AXIS_MOTION:
                 // on gamepads, the axes are the analog sticks
@@ -3683,8 +3696,8 @@ static void init_term_size_and_scaling_factor()
         int display_count = 0;
         SDL_DisplayID *display_list = SDL_GetDisplays( &display_count );
         const SDL_DisplayID current_display_id = ( display_list && current_display_idx < display_count )
-                ? display_list[current_display_idx]
-                : SDL_GetPrimaryDisplay();
+            ? display_list[current_display_idx]
+            : SDL_GetPrimaryDisplay();
         SDL_free( display_list );
 
         const SDL_DisplayMode *current_display = SDL_GetDesktopDisplayMode( current_display_id );
@@ -3848,7 +3861,7 @@ void catacurses::init_interface()
 
     try {
         font = std::make_unique<FontFallbackList>( renderer, format, fl.fontwidth, fl.fontheight,
-                windowsPalette, fl.typeface, fl.fontsize, fl.fontblending );
+               windowsPalette, fl.typeface, fl.fontsize, fl.fontblending );
         map_font = std::make_unique<FontFallbackList>( renderer, format, fl.map_fontwidth,
                    fl.map_fontheight,
                    windowsPalette, fl.map_typeface, fl.map_fontsize, fl.fontblending );
@@ -4267,7 +4280,7 @@ bool save_screenshot( const std::string &file_path )
     // Save screenshot as PNG file
     const bool ok = !printErrorIf( !IMG_SavePNG( readback.get(), file_path.c_str() ),
                                    std::string( "save_screenshot: cannot save screenshot file: " +
-                                           file_path ).c_str() );
+                                       file_path ).c_str() );
     return ok;
 }
 
@@ -4302,3 +4315,143 @@ const SDL_Window_Ptr &get_sdl_window()
 
 
 #endif // TILES
+#if defined(TILES)
+namespace {
+struct controller_box { int x; int y; int w; int h; };
+auto controller_rect( const controller_box & box, const SDL_Color & color ) -> void
+{
+    const auto rect = SDL_FRect{
+        .x = static_cast<float>( box.x ), .y = static_cast<float>( box.y ),
+        .w = static_cast<float>( box.w ), .h = static_cast<float>( box.h ) };
+    geometry->rect( renderer, rect, color );
+}
+auto controller_text( const std::string & text, point pos, unsigned char color ) -> void
+{
+    for( const auto code : utf8_to_utf32( text ) )
+    {
+        const auto ch = utf32_to_utf8( code );
+        font->OutputChar( renderer, geometry, ch, pos, color );
+        pos.x += font->width * utf8_width( ch );
+    }
+}
+struct footer_hint { std::string symbol; std::string label; };
+auto controller_row( const std::vector<footer_hint> &entries, point pos, int columns ) -> void
+{
+    if( entries.empty() ) { return; }
+    auto symbol_width = 0;
+    for( const auto &entry : entries ) { symbol_width += utf8_width( entry.symbol ) + 2; }
+    const auto label_width = std::clamp( ( columns - symbol_width ) / static_cast<int>( entries.size() ), 2, 18 );
+    const auto right = pos.x + columns * font->width;
+    for( const auto &entry : entries )
+    {
+        const auto label = utf8_truncate( entry.label, label_width );
+        const auto span = ( utf8_width( entry.symbol ) + utf8_width( label ) + 2 ) * font->width;
+        if( pos.x + span > right ) { break; }
+        controller_text( entry.symbol, pos, 11 );
+        controller_text( label, point( pos.x + ( utf8_width( entry.symbol ) + 1 ) * font->width, pos.y ),
+                         15 );
+        pos.x += span;
+    }
+}
+auto draw_controller_overlay() -> void
+{
+    const auto *ctxt = gamepad::current_context();
+    if( !gamepad::is_active() || !ctxt ) { return; }
+    auto w = 0;
+    auto h = 0;
+    SDL_GetCurrentRenderOutputSize( renderer.get(), &w, &h );
+    SDL_SetRenderLogicalPresentation( renderer.get(), 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED );
+    const auto scale = static_cast<float>( h ) / WindowHeight * scaling_factor;
+    SDL_SetRenderScale( renderer.get(), scale, scale );
+    const auto width = static_cast<int>( w / scale );
+    const auto height = static_cast<int>( h / scale );
+    const auto top = height - 2 * fontheight;
+    const auto hints = gamepad::context_hints( *ctxt );
+    auto rows = std::array<std::vector<footer_hint>, 2>{};
+    if( gamepad::radial_input_captured() )
+    {
+        rows[0] = { { .symbol = "LB/RB", .label = _( "Change category" ) },
+            { .symbol = "L/R↕↔", .label = _( "Select action" ) }, { .symbol = "Ⓑ", .label = _( "Cancel" ) }
+        };
+        rows[1] = { { .symbol = "LT↑", .label = gamepad::radial_cancelled() ? _( "Cancelled — release LT" ) : _( "Release LT to execute" ) } };
+    } else
+    {
+        for( const auto code : { PAD_A, PAD_B, PAD_X, PAD_Y, PAD_LS, PAD_RS, PAD_UP, PAD_DOWN, PAD_LEFT, PAD_RIGHT } ) {
+            const auto found = std::ranges::find_if( hints, [&]( const auto & hint ) { return hint.code == code && hint.alternate == gamepad::is_alt_held(); } );
+            if( found != hints.end() ) {
+                const auto row = code >= PAD_UP && code <= PAD_RIGHT ? 1 : ( rows[0].size() < 6 ? 0 : 1 );
+                rows[row].push_back( { .symbol = found->symbol, .label = ctxt->get_action_name( found->action ) } );
+            }
+        }
+        if( !gamepad::uses_menu( *ctxt ) ) { rows[1].push_back( { .symbol = "L↕↔ RT", .label = _( "Move" ) } ); }
+        const auto has_wheel = std::ranges::any_of( hints, []( const auto & hint ) { return hint.code >= PAD_L_RADIAL_N && hint.code <= PAD_R_RADIAL_NW; } );
+        if( has_wheel ) { rows[1].push_back( { .symbol = "LT L/R", .label = _( "Radial menu" ) } ); }
+        if( std::ranges::any_of( ctxt->get_registered_actions_copy(), []( const auto & action ) { return action == "HELP_KEYBINDINGS"; } ) ) { rows[1].push_back( { .symbol = "LT ☰", .label = _( "Controller shortcuts" ) } ); }
+    }
+    if( gamepad::is_radial_left_open() || gamepad::is_radial_right_open() )
+    {
+        SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_BLEND );
+        controller_rect( { .x = 0, .y = 0, .w = width, .h = top }, { 7, 12, 9, 205 } );
+        SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_NONE );
+        // A separate ring scale keeps its text readable on 480x360 / 640x360.
+        const auto ring_scale = std::min( { static_cast<float>( w ) / ( 72 * font->width ),
+                                            static_cast<float>( h - 2 * fontheight * scale ) / ( 22 * fontheight ), scale * 1.25f } );
+        SDL_SetRenderScale( renderer.get(), ring_scale, ring_scale );
+        const auto cx = static_cast<int>( w / ring_scale ) / 2;
+        const auto ring_top = ( static_cast<int>( ( h - 2 * fontheight * scale ) / ring_scale ) - 22 *
+                                fontheight ) / 2;
+        const auto cy = ring_top + 11 * fontheight;
+        controller_rect( { .x = cx - 36 * font->width, .y = ring_top, .w = 72 * font->width, .h = 22 * fontheight }, { 23, 32, 28, 255 } );
+        const auto centered = [&]( const std::string & text, point pos, unsigned char color ) {
+            controller_text( text, point( pos.x - utf8_width( text ) * font->width / 2, pos.y ), color );
+        };
+        centered( _( "Action radial" ), point( cx, ring_top + fontheight ), 15 );
+        const auto page = gamepad::current_radial_page();
+        for( auto i = 0; i < 4; ++i ) {
+            const auto x = cx + ( i * 16 - 24 ) * font->width;
+            controller_rect( { .x = x - 7 * font->width, .y = ring_top + 3 * fontheight, .w = 14 * font->width, .h = 2 * fontheight },
+                             i == page ? SDL_Color{ 218, 190, 103, 255 } : SDL_Color{ 46, 59, 49, 255 } );
+            centered( gamepad::radial_page_name( i ), point( x, ring_top + 3 * fontheight ),
+                      i == page ? 0 : 15 );
+        }
+        const auto positions = std::array{ point( 0, -4 ), point( 24, -4 ), point( 24, 0 ), point( 24, 4 ),
+                                           point( 0, 4 ), point( -24, 4 ), point( -24, 0 ), point( -24, -4 ) };
+        constexpr auto arrows = std::array{ "↑", "↗", "→", "↘", "↓", "↙", "←", "↖" };
+        const auto entries = gamepad::radial_entries( *ctxt, page );
+        const auto selected = static_cast<int>( gamepad::get_radial_left_direction() ) - 1;
+        for( auto i = 0; i < 8; ++i ) {
+            if( !entries[i].available ) { continue; }
+            const auto x = cx + positions[i].x * font->width;
+            const auto y = cy + positions[i].y * fontheight;
+            const auto highlight = i == selected;
+            controller_rect( { .x = x - 10 * font->width, .y = y - fontheight, .w = 20 * font->width, .h = 3 * fontheight },
+                             highlight ? SDL_Color{ 218, 190, 103, 255 } : SDL_Color{ 57, 73, 60, 255 } );
+            centered( arrows[i], point( x, y - fontheight / 2 ), highlight ? 0 : 11 );
+            centered( utf8_truncate( entries[i].label, 18 ), point( x, y + fontheight / 2 ),
+                      highlight ? 0 : 15 );
+        }
+        centered( "L/R↕↔", point( cx, cy - 2 * fontheight ), 11 );
+        const auto valid = selected >= 0 && selected < 8 && entries[selected].available;
+        centered( valid ? utf8_truncate( entries[selected].label, 26 ) : _( "Center stick, then select" ),
+                  point( cx, cy ), 15 );
+        centered( valid ? _( "Release LT to execute" ) : _( "Release LT to cancel" ), point( cx,
+                  cy + 2 * fontheight ), 11 );
+        centered( _( "Ⓑ Cancel · LB / RB Change category" ), point( cx, ring_top + 20 * fontheight ),
+                  15 );
+        SDL_SetRenderScale( renderer.get(), scale, scale );
+    }
+    controller_rect( { .x = 0, .y = top, .w = width, .h = 2 * fontheight }, { 24, 30, 22, 255 } );
+    for( auto row = 0; row < 2; ++row )
+    {
+        controller_row( rows[row], point( font->width, top + row * fontheight ), width / font->width - 2 );
+    }
+    SDL_SetRenderScale( renderer.get(), 1.0f, 1.0f );
+    SDL_SetRenderLogicalPresentation( renderer.get(), WindowWidth / scaling_factor, WindowHeight / scaling_factor, SDL_LOGICAL_PRESENTATION_STRETCH );
+}
+} // namespace
+namespace gamepad {
+auto submit_event( const input_event & event ) -> void { last_input = event; }
+auto request_refresh() -> void { needupdate = true; refresh_display(); }
+auto compact_layout() -> bool { return WindowWidth <= 640 && WindowHeight <= 480; }
+}
+#endif

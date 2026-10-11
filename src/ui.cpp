@@ -1,4 +1,7 @@
 #include "ui.h"
+#if defined(TILES)
+#include "controller.h"
+#endif
 
 #include <algorithm>
 #include <cassert>
@@ -855,7 +858,11 @@ void uilist::show( ui_adaptor &ui )
             }
 
             mvwprintz( window, point( pad_left + 1, estart + si ), co, padspaces );
-            if( entries[ ei ].hotkey >= 33 && entries[ ei ].hotkey < 126 ) {
+            if( entries[ ei ].hotkey >= 33 && entries[ ei ].hotkey < 126
+#if defined(TILES)
+                && !gamepad::is_active()
+#endif
+              ) {
                 mvwprintz( window, point( pad_left + 2, estart + si ), hk_co,
                            "%c", entries[ ei ].hotkey );
             }

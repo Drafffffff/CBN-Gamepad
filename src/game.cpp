@@ -1,3 +1,7 @@
+#include "advanced_inv.h"
+#if defined(TILES)
+#include "controller.h"
+#endif
 #include "game.h"
 
 #include "achievement.h"
@@ -10584,7 +10588,11 @@ void game::reset_item_list_state( const catacurses::window &window, int height,
     mvwputch( window, point( width - 1, TERMY - height - 1 ), c_light_gray,
               LINE_XOXX ); // -|
 
-    mvwprintz( window, point( 2, 0 ), c_light_green, "<Tab> " );
+    mvwprintz( window, point( 2, 0 ), c_light_green,
+#if defined(TILES)
+                   gamepad::is_active() ? "RB " :
+#endif
+                   "<Tab> " );
     wprintz( window, c_white, _( "Items" ) );
 
     std::string sSort;
@@ -10759,7 +10767,11 @@ static auto list_vehicles( const vehicle_list_t &vehicle_list ) -> vehicle_menu_
         draw_custom_border( w_vehicle_info_border, true, true, true, true, LINE_XXXO, LINE_XOXX, true,
                             true );
 
-        mvwprintz( w_vehicles_border, point( 2, 0 ), c_light_green, "<Tab> " );
+        mvwprintz( w_vehicles_border, point( 2, 0 ), c_light_green,
+#if defined(TILES)
+                   gamepad::is_active() ? "RB " :
+#endif
+                   "<Tab> " );
         wprintz( w_vehicles_border, c_white, _( "Vehicles" ) );
 
         if( vehicle_list.empty() ) {
@@ -11137,6 +11149,7 @@ game::vmenu_ret game::list_items( const std::vector<map_item_stack> &item_list )
 
     std::string action;
     input_context ctxt( "LIST_ITEMS" );
+    ctxt.register_action( "CONFIRM", to_translation( "Advanced Inventory Manager" ) );
     ctxt.register_action( "UP", to_translation( "Move cursor up" ) );
     ctxt.register_action( "DOWN", to_translation( "Move cursor down" ) );
     ctxt.register_action( "LEFT", to_translation( "Previous item" ) );
@@ -11285,7 +11298,11 @@ game::vmenu_ret game::list_items( const std::vector<map_item_stack> &item_list )
 
     do {
         bool recalc_unread = false;
-        if( action == "COMPARE" && activeItem ) {
+        if( action == "CONFIRM" ) {
+            create_advanced_inv();
+            refilter = true;
+            ui.invalidate_ui();
+        } else if( action == "COMPARE" && activeItem ) {
             game_menus::inv::compare( u, active_pos );
             recalc_unread = highlight_unread_items;
         } else if( action == "FILTER" ) {
@@ -11595,7 +11612,11 @@ game::vmenu_ret game::list_monsters( const std::vector<Creature *> &monster_list
             draw_custom_border( w_monster_info_border, true, true, true, true, LINE_XXXO, LINE_XOXX, true,
                                 true );
 
-            mvwprintz( w_monsters_border, point( 2, 0 ), c_light_green, "<Tab> " );
+            mvwprintz( w_monsters_border, point( 2, 0 ), c_light_green,
+#if defined(TILES)
+                   gamepad::is_active() ? "RB " :
+#endif
+                   "<Tab> " );
             wprintz( w_monsters_border, c_white, _( "Monsters" ) );
 
             if( monster_list.empty() ) {
