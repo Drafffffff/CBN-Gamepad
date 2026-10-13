@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-root="${CBN_GAMEPAD_ROOT:-$HOME/Games/cbn-gamepad}"
+script_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+root="${CBN_GAMEPAD_ROOT:-$script_root}"
 profile="${CBN_GAMEPAD_PROFILE:-$root/profile}"
 if [[ ! -e "$profile/config/options.json" && "$profile" == "$root/profile" ]]; then
     "$root/install-device.sh" auto

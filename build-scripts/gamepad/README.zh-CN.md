@@ -4,20 +4,20 @@
 
 这是修改过的游戏客户端，不是数据模组；输入捕获和原生渲染需要修改客户端。
 
-安装在 `~/Games/cbn-gamepad-stable`，Steam 名称为 **CBN Gamepad**，使用独立存档、配置和运行库。原 CDDA 安装保留。不要直接覆盖 CDDA 存档；两个项目的数据格式和内容已经分化。
+安装在 `~/Games/cbn-gamepad-stable`，Steam 名称为 **CBN Gamepad Stable**，使用独立存档、配置和运行库。原 CDDA 安装保留。不要直接覆盖 CDDA 存档；两个项目的数据格式和内容已经分化。
 
 ## 操作
 
 | 控制 | 行为 |
 |---|---|
-| 左摇杆＋RT | 按方向移动；RT 单独按下等待 |
+| 左摇杆 / RT | 左摇杆预选八方向邻格，不耗回合；RT 按当前方向移动，回中时等待 |
 | 右摇杆按下 | 查看周围；进入查看后使用方向控制 |
 | LT＋右摇杆按下 | 附近物品列表；在列表按 A 进入高级物品管理 |
-| A / B / X / Y | 地图中分别为调查、抓取、砸毁、投掷；菜单按实际底栏提示 |
+| A / B / X / Y | 地图中分别为邻格交互、抓取、砸毁、投掷；菜单按实际底栏提示 |
 | 十字键 | 当前页面的快捷操作或菜单方向导航 |
 | LT＋任一摇杆 | 打开轮盘，LB/RB 切换探索、物品、生存、信息四类 |
 | 松开 LT | 执行选项；摇杆回中后松开，或先按 B，均取消 |
-| LT＋☰ | 当前页面完整手柄快捷键列表，可进入原键盘设置 |
+| LT＋☰ | 当前页面完整动作列表，可选择执行，也可进入原键盘设置 |
 | LT＋返回键 | 缩小地图；放大地图在“信息”轮盘中 |
 
 底栏直接读取当前 `input_context` 的注册动作及实际绑定。轮盘也只显示当前可用动作，并去除直接按键已覆盖的动作。打开轮盘时捕获输入，地图光标不会跟随移动。新增键名使用 `PAD_` 前缀，避免 BN 共享键名表覆盖原键盘的 `A`、`UP` 等键。
@@ -32,7 +32,7 @@
 
 ## 便携包首次安装
 
-将包解压到 `~/Games`，执行 `~/Games/cbn-gamepad-stable/install-device.sh small`（Steam Deck）或 `desktop`（Bazzite）。添加 `~/Games/cbn-gamepad-stable/launch.sh` 为 Steam 非 Steam 游戏，名称使用 **CBN Gamepad**。安装器只补齐缺少的配置，已有玩家设置保留。
+将包解压到 `~/Games`，执行 `~/Games/cbn-gamepad-stable/install-device.sh small`（Steam Deck）或 `desktop`（Bazzite）。添加 `~/Games/cbn-gamepad-stable/launch.sh` 为 Steam 非 Steam 游戏，名称使用 **CBN Gamepad Stable**。安装器只补齐缺少的配置，已有玩家设置保留。
 
 ## 构建和验证
 
