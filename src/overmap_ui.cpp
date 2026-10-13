@@ -25,6 +25,9 @@
 #include "calendar.h"
 #ifdef TILES
 #include "cata_tiles.h"
+#if defined(TILES)
+#    include "controller.h"
+#endif
 #endif // TILES
 #include "cata_utility.h"
 #include "catacharset.h"
@@ -1542,53 +1545,60 @@ static void draw_om_sidebar(
         }
     }
 
-    mvwprintz( wbar, point( 1, 12 ), c_magenta, _( "Use movement keys to pan." ) );
-    mvwprintz( wbar, point( 1, 13 ), c_magenta, _( "Press W to preview route." ) );
-    mvwprintz( wbar, point( 1, 14 ), c_magenta, _( "Press again to confirm." ) );
-    if( inp_ctxt != nullptr ) {
-        int y = 16;
+#if defined(TILES)
+    if( !gamepad::is_active() ) {
+#endif
+        mvwprintz( wbar, point( 1, 12 ), c_magenta, _( "Use movement keys to pan." ) );
+        mvwprintz( wbar, point( 1, 13 ), c_magenta, _( "Press W to preview route." ) );
+        mvwprintz( wbar, point( 1, 14 ), c_magenta, _( "Press again to confirm." ) );
+        if( inp_ctxt != nullptr ) {
+            int y = 16;
 
-        const auto print_hint = [&]( const std::string & action, nc_color color = c_magenta ) {
-            y += fold_and_print( wbar, point( 1, y ), getmaxx( wbar ) - 1, color, string_format( _( "%s - %s" ),
-                                 inp_ctxt->get_desc( action ),
-                                 inp_ctxt->get_action_name( action ) ) );
-        };
+            const auto print_hint = [&]( const std::string & action, nc_color color = c_magenta ) {
+                y += fold_and_print( wbar, point( 1, y ), getmaxx( wbar ) - 1, color, string_format( _( "%s - %s" ),
+                                     inp_ctxt->get_desc( action ),
+                                     inp_ctxt->get_action_name( action ) ) );
+            };
 
-        if( data.debug_editor ) {
-            print_hint( "PLACE_TERRAIN", c_light_blue );
-            print_hint( "PLACE_SPECIAL", c_light_blue );
-            print_hint( "SET_SPECIAL_ARGS", c_light_blue );
-            ++y;
+            if( data.debug_editor ) {
+                print_hint( "PLACE_TERRAIN", c_light_blue );
+                print_hint( "PLACE_SPECIAL", c_light_blue );
+                print_hint( "SET_SPECIAL_ARGS", c_light_blue );
+                ++y;
+            }
+
+            const bool show_overlays = uistate.overmap_show_overlays || uistate.overmap_blinking;
+            const bool is_explored = ACTIVE_OVERMAP_BUFFER.is_explored( center );
+            const bool is_path = ACTIVE_OVERMAP_BUFFER.is_path( center );
+
+            print_hint( "LEVEL_UP" );
+            print_hint( "LEVEL_DOWN" );
+            print_hint( "CENTER" );
+            print_hint( "SEARCH" );
+            print_hint( "CREATE_NOTE" );
+            print_hint( "DELETE_NOTE" );
+            print_hint( "LIST_NOTES" );
+            print_hint( "MISSIONS" );
+            print_hint( "TOGGLE_MAP_NOTES", uistate.overmap_show_map_notes ? c_pink : c_magenta );
+            print_hint( "TOGGLE_BLINKING", uistate.overmap_blinking ? c_pink : c_magenta );
+            print_hint( "TOGGLE_OVERLAYS", show_overlays ? c_pink : c_magenta );
+            print_hint( "TOGGLE_LAND_USE_CODES", uistate.overmap_show_land_use_codes ? c_pink : c_magenta );
+            print_hint( "TOGGLE_CITY_LABELS", uistate.overmap_show_city_labels ? c_pink : c_magenta );
+            print_hint( "TOGGLE_HORDES", uistate.overmap_show_hordes ? c_pink : c_magenta );
+            print_hint( "TOGGLE_EXPLORED", is_explored ? c_pink : c_magenta );
+            print_hint( "TOGGLE_MARK_PATH", is_path ? c_pink : c_magenta );
+            print_hint( "TOGGLE_FAST_SCROLL", fast_scroll ? c_pink : c_magenta );
+            print_hint( "TOGGLE_FOREST_TRAILS", uistate.overmap_show_forest_trails ? c_pink : c_magenta );
+            print_hint( "TOGGLE_OVERMAP_WEATHER", uistate.overmap_visible_weather ? c_pink : c_magenta );
+            print_hint( "TOGGLE_DEFAULT_0", uistate.overmap_default_0 ? c_pink : c_magenta );
+            print_hint( "SET_CUSTOM_WAYPOINT", player_character.custom_waypoint ? c_pink : c_magenta );
+            print_hint( "HELP_KEYBINDINGS" );
+            print_hint( "QUIT" );
         }
 
-        const bool show_overlays = uistate.overmap_show_overlays || uistate.overmap_blinking;
-        const bool is_explored = ACTIVE_OVERMAP_BUFFER.is_explored( center );
-        const bool is_path = ACTIVE_OVERMAP_BUFFER.is_path( center );
-
-        print_hint( "LEVEL_UP" );
-        print_hint( "LEVEL_DOWN" );
-        print_hint( "CENTER" );
-        print_hint( "SEARCH" );
-        print_hint( "CREATE_NOTE" );
-        print_hint( "DELETE_NOTE" );
-        print_hint( "LIST_NOTES" );
-        print_hint( "MISSIONS" );
-        print_hint( "TOGGLE_MAP_NOTES", uistate.overmap_show_map_notes ? c_pink : c_magenta );
-        print_hint( "TOGGLE_BLINKING", uistate.overmap_blinking ? c_pink : c_magenta );
-        print_hint( "TOGGLE_OVERLAYS", show_overlays ? c_pink : c_magenta );
-        print_hint( "TOGGLE_LAND_USE_CODES", uistate.overmap_show_land_use_codes ? c_pink : c_magenta );
-        print_hint( "TOGGLE_CITY_LABELS", uistate.overmap_show_city_labels ? c_pink : c_magenta );
-        print_hint( "TOGGLE_HORDES", uistate.overmap_show_hordes ? c_pink : c_magenta );
-        print_hint( "TOGGLE_EXPLORED", is_explored ? c_pink : c_magenta );
-        print_hint( "TOGGLE_MARK_PATH", is_path ? c_pink : c_magenta );
-        print_hint( "TOGGLE_FAST_SCROLL", fast_scroll ? c_pink : c_magenta );
-        print_hint( "TOGGLE_FOREST_TRAILS", uistate.overmap_show_forest_trails ? c_pink : c_magenta );
-        print_hint( "TOGGLE_OVERMAP_WEATHER", uistate.overmap_visible_weather ? c_pink : c_magenta );
-        print_hint( "TOGGLE_DEFAULT_0", uistate.overmap_default_0 ? c_pink : c_magenta );
-        print_hint( "SET_CUSTOM_WAYPOINT", player_character.custom_waypoint ? c_pink : c_magenta );
-        print_hint( "HELP_KEYBINDINGS" );
-        print_hint( "QUIT" );
+#if defined(TILES)
     }
+#endif
 
     // Display dimension name above the coordinate line
     std::string dim_name;

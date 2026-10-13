@@ -1,8 +1,10 @@
 # CBN Gamepad
 
-基于 Cataclysm: Bright Nights `2026-10-11`（`ac87bff678e9`）移植的原生 SDL3 手柄界面。交互参考 [CDDA Gamepad](https://github.com/Drafffffff/CDDA-Gamepad)。这是修改过的游戏客户端，不是数据模组；输入捕获和原生渲染需要修改客户端。
+基于 Cataclysm: Bright Nights 最新稳定版 `v0.13.0`（`e7b497637d45`）移植的原生 SDL3 手柄界面。交互参考 [CDDA Gamepad](https://github.com/Drafffffff/CDDA-Gamepad)。已使用 SteamGridDB 的 Bright Nights 专属竖版与横版封面（Purity3556）。
 
-安装在 `~/Games/cbn-gamepad`，Steam 名称为 **CBN Gamepad**，使用独立存档、配置和运行库。原 CDDA 安装保留。不要直接覆盖 CDDA 存档；两个项目的数据格式和内容已经分化。
+这是修改过的游戏客户端，不是数据模组；输入捕获和原生渲染需要修改客户端。
+
+安装在 `~/Games/cbn-gamepad-stable`，Steam 名称为 **CBN Gamepad**，使用独立存档、配置和运行库。原 CDDA 安装保留。不要直接覆盖 CDDA 存档；两个项目的数据格式和内容已经分化。
 
 ## 操作
 
@@ -29,7 +31,7 @@
 
 ## 便携包首次安装
 
-将包解压到 `~/Games`，执行 `~/Games/cbn-gamepad/install-device.sh small`（Steam Deck）或 `desktop`（Bazzite）。添加 `~/Games/cbn-gamepad/launch.sh` 为 Steam 非 Steam 游戏，名称使用 **CBN Gamepad**。安装器只补齐缺少的配置，已有玩家设置保留。
+将包解压到 `~/Games`，执行 `~/Games/cbn-gamepad-stable/install-device.sh small`（Steam Deck）或 `desktop`（Bazzite）。添加 `~/Games/cbn-gamepad-stable/launch.sh` 为 Steam 非 Steam 游戏，名称使用 **CBN Gamepad**。安装器只补齐缺少的配置，已有玩家设置保留。
 
 ## 构建和验证
 
