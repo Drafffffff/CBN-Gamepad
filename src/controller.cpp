@@ -531,7 +531,13 @@ namespace
 auto send( const input_event &event ) -> void { submit_event( event ); }
 auto mapped( int code ) -> input_event
 {
-    return event_for_control( code, alternate, active_context && uses_menu( *active_context ) );
+    const auto event = event_for_control( code, alternate, active_context && uses_menu( *active_context ) );
+    if( std::getenv( "CBN_GAMEPAD_TRACE" ) && active_context ) {
+        std::fprintf( stderr, "CBN controller route: code=%d context=%s menu=%d action=%s\n",
+                      code, active_context->controller_category().c_str(), uses_menu( *active_context ),
+                      active_context->input_to_action( event ).c_str() );
+    }
+    return event;
 }
 auto stick_code( direction dir, bool right ) -> int
 {
