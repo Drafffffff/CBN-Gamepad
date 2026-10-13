@@ -22,9 +22,21 @@ name = f'cbn-gamepad-{args.version}-linux-x86_64'
 with tempfile.TemporaryDirectory(prefix='cbn-release-') as temporary:
     root = Path(temporary) / 'cbn-gamepad-stable'
     root.mkdir()
+    source = runtime / 'source'
     for directory in ['data', 'gfx', 'lang']:
+        missing_docs = []
+        for link in (runtime / 'app' / directory).rglob('*'):
+            if link.is_symlink() and not link.exists():
+                original = source / directory / link.relative_to(runtime / 'app' / directory)
+                if link.name != 'README.md' or not original.is_file():
+                    raise RuntimeError(f'Missing runtime asset: {link}')
+                missing_docs.append((link, original))
         shutil.copytree(runtime / 'app' / directory, root / 'app' / directory,
-                        ignore=shutil.ignore_patterns('.git', '__pycache__'))
+                        ignore=shutil.ignore_patterns('.git', '__pycache__'),
+                        ignore_dangling_symlinks=True)
+        for link, original in missing_docs:
+            shutil.copy2(original, root / 'app' / directory /
+                         link.relative_to(runtime / 'app' / directory))
     shutil.copy2(runtime / 'app/cataclysm-bn-tiles', root / 'app/cataclysm-bn-tiles')
     for directory in ['runtime', 'presets', 'licenses']:
         shutil.copytree(runtime / directory, root / directory)
