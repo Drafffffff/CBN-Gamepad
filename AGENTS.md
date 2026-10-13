@@ -154,6 +154,8 @@ rg -C2 -i 'speedway' lang/po/ko.po | rg -v '^(#:|--)' | head -n 20
 
 ## Controller port validation
 
+- Validate the real Steam input device path as well as virtual fixtures. A fixture that filters all keyboard and mouse events cannot establish that mixed Steam input works. Cover left-stick menu navigation separately from trigger-gated gameplay movement.
+
 - Desktop input contexts do not expose Android-only getters; use the const controller category accessor and registered-action copy.
 - SDL3 gamepad timestamps use nanoseconds, while SDL_GetTicks uses milliseconds; scheduler deadlines must use SDL_GetTicks consistently.
 - Configure new build directories with absolute compiler paths. Changing compiler paths in a populated CMake cache can reset feature flags; recheck TILES, SOUND and USE_HOME_DIR.

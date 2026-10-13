@@ -66,6 +66,15 @@ TEST_CASE(
     main_menu.register_cardinal();
     main_menu.register_action("HELP_KEYBINDINGS");
     CHECK(main_menu.input_to_action(gamepad::event_for_control(PAD_UP, false, true)) == "UP");
+    CHECK(main_menu.input_to_action(gamepad::event_for_control(PAD_LS_UP, false, true)) == "UP");
+    CHECK(
+        main_menu.input_to_action(gamepad::event_for_control(PAD_LS_DOWN, false, true)) == "DOWN");
+    CHECK(
+        main_menu.input_to_action(gamepad::event_for_control(PAD_LS_LEFT, false, true)) == "LEFT");
+    CHECK(main_menu.input_to_action(gamepad::event_for_control(PAD_LS_RIGHT, false, true))
+          == "RIGHT");
+    CHECK(gamepad::event_for_control(PAD_LS_UP, false, false)
+          == input_event(PAD_LS_UP, input_event_t::gamepad));
     CHECK(main_menu.input_to_action(gamepad::event_for_control(PAD_START, true, true))
           == "HELP_KEYBINDINGS");
     auto direction = input_context("DEFAULTMODE");

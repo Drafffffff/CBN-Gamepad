@@ -3223,13 +3223,18 @@ static void CheckMessages()
 #endif
 
     last_input = input_event();
-    gamepad::tick();
+    const auto controller_repeat = gamepad::tick();
 
     std::optional<point> resize_dims;
     bool render_target_reset = false;
 
-    while( SDL_PollEvent( &ev ) ) {
-        if( gamepad::handle_event( ev ) ) { needupdate = true; continue; }
+    while( !controller_repeat && SDL_PollEvent( &ev ) ) {
+        if( gamepad::handle_event( ev ) ) {
+            needupdate = true;
+            // Deliver each routed controller press before later SDL events can replace it.
+            if( last_input.type != input_event_t::error ) { break; }
+            continue;
+        }
         if( gamepad::radial_input_captured() && ( ev.type == SDL_EVENT_KEY_DOWN ||
                 ev.type == SDL_EVENT_KEY_UP || ev.type == SDL_EVENT_TEXT_INPUT ||
                 ev.type == SDL_EVENT_MOUSE_MOTION || ev.type == SDL_EVENT_MOUSE_BUTTON_UP ||
@@ -4451,7 +4456,9 @@ auto draw_controller_overlay() -> void
 } // namespace
 namespace gamepad {
 auto submit_event( const input_event & event ) -> void { last_input = event; }
-auto request_refresh() -> void { needupdate = true; refresh_display(); }
+// Coalesce controller axis updates with the normal frame update. Rendering here
+// makes every small axis change block the remaining input events.
+auto request_refresh() -> void { needupdate = true; }
 auto compact_layout() -> bool { return WindowWidth <= 640 && WindowHeight <= 480; }
 }
 #endif

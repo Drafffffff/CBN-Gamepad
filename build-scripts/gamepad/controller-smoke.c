@@ -69,6 +69,13 @@ static const struct step steps[]={
 };
 bool SDL_PollEvent(SDL_Event *event) {
     bool (*real_poll)(SDL_Event *)=dlsym(RTLD_NEXT,"SDL_PollEvent");
+    static bool noise_pending;
+    if(event && noise_pending) {
+        noise_pending=false;
+        memset(event,0,sizeof(*event));event->type=SDL_EVENT_MOUSE_MOTION;
+        event->motion.x=200;event->motion.y=120;
+        return true;
+    }
     if(!begin && fixture)begin=SDL_GetTicks();
     while(real_poll(event)) {
         if(event && ((event->type>=SDL_EVENT_KEY_DOWN && event->type<=SDL_EVENT_KEYMAP_CHANGED) ||
@@ -83,6 +90,13 @@ bool SDL_PollEvent(SDL_Event *event) {
     if(elapsed>95000){fprintf(stderr,"Fixture screenshots=%u expected=8191\n",saved);_Exit(saved==8191 ? 0 : 3);}
     if(stage<sizeof(steps)/sizeof(*steps) && elapsed>steps[stage].at) {
         struct step step=steps[stage++];
+        if(getenv("CBN_SMOKE_MENU_NAV")) {
+            if(step.at==6000)return false;
+            if(step.at==6300 || step.at==6350 || step.at==6600 || step.at==6650) {
+                step.kind=0;step.key=SDL_GAMEPAD_AXIS_LEFTY;
+                step.value=(step.at==6300 || step.at==6600) ? 26000 : 0;
+            }
+        }
         if(step.kind==4){if(!getenv("CBN_SMOKE_MAP"))return false;step.kind=1;}
         if(getenv("CBN_SMOKE_MAP") && (step.at==80000 || step.at==80050))step.key=SDL_GAMEPAD_BUTTON_BACK;
         fprintf(stderr,"step=%u elapsed=%llu kind=%d key=%d\n",stage,(unsigned long long)elapsed,step.kind,step.key);
@@ -91,6 +105,7 @@ bool SDL_PollEvent(SDL_Event *event) {
         else if(step.kind==1){event->type=step.value?SDL_EVENT_GAMEPAD_BUTTON_DOWN:SDL_EVENT_GAMEPAD_BUTTON_UP;event->gbutton.which=fixture;event->gbutton.button=step.key;}
         else if(step.kind==3){static char text[2];text[0]=step.key;text[1]=0;event->type=SDL_EVENT_TEXT_INPUT;event->text.text=text;}
         else {event->type=SDL_EVENT_KEY_DOWN;event->key.key=step.key;event->key.down=true;}
+        if(getenv("CBN_SMOKE_MIXED_INPUT") && (step.kind==0 || step.kind==1))noise_pending=true;
         return true;
     }
     static Uint64 exposed;

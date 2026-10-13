@@ -2,6 +2,8 @@
 #include "controller.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <set>
 #include "catacharset.h"
 #include "options.h"
@@ -333,12 +335,20 @@ auto event_for_control( int code, bool alternate, bool menu ) -> input_event
         if( !alternate ) {
             switch( code ) {
                 case PAD_UP:
+                case PAD_LS_UP:
+                case PAD_LS_UP_LEFT:
+                case PAD_LS_UP_RIGHT:
                     return input_event( KEY_UP, input_event_t::keyboard );
                 case PAD_DOWN:
+                case PAD_LS_DOWN:
+                case PAD_LS_DOWN_LEFT:
+                case PAD_LS_DOWN_RIGHT:
                     return input_event( KEY_DOWN, input_event_t::keyboard );
                 case PAD_LEFT:
+                case PAD_LS_LEFT:
                     return input_event( KEY_LEFT, input_event_t::keyboard );
                 case PAD_RIGHT:
+                case PAD_LS_RIGHT:
                     return input_event( KEY_RIGHT, input_event_t::keyboard );
                 case PAD_RS_UP:
                     return input_event( '8', input_event_t::keyboard );
@@ -456,6 +466,13 @@ auto tick() -> bool
 }
 auto handle_event( const SDL_Event &event ) -> bool
 {
+    if( std::getenv( "CBN_GAMEPAD_TRACE" ) && event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN ) {
+        std::fprintf( stderr,
+                      "CBN controller event: type=%u id=%u selected=%u button=%u focus=%d age_ms=%.1f\n",
+                      event.type, event.gbutton.which, controller ? SDL_GetGamepadID( controller ) : 0,
+                      event.gbutton.button, SDL_GetKeyboardFocus() != nullptr,
+                      static_cast<double>( SDL_GetTicksNS() - event.common.timestamp ) / 1000000.0 );
+    }
     if( event.type == SDL_EVENT_GAMEPAD_ADDED ) {
         if( !controller && get_option<bool>( "ENABLE_JOYSTICK" ) ) { controller = SDL_OpenGamepad( event.gdevice.which ); }
         return true;
@@ -514,11 +531,15 @@ auto handle_event( const SDL_Event &event ) -> bool
         const auto changed = old != dir;
         old = dir;
         if( alternate ) { radial.move( stick, dir ); repeat_at = 0; }
-        else if( stick == 1 && changed ) {
-            if( dir == direction::NONE ) { if( repeat_button == PAD_RS ) { repeat_at = 0; } }
-            else { start_repeat( PAD_RS, mapped( stick_code( dir, true ) ) ); }
+        else if( changed && ( stick == 1 || ( active_context && uses_menu( *active_context ) ) ) ) {
+            const auto repeat_control = stick == 0 ? PAD_LS : PAD_RS;
+            if( dir == direction::NONE ) {
+                if( repeat_button == repeat_control ) { repeat_at = 0; }
+            } else {
+                start_repeat( repeat_control, mapped( stick_code( dir, stick == 1 ) ) );
+            }
         }
-        request_refresh();
+        if( changed ) { request_refresh(); }
         return true;
     }
     if( event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN || event.type == SDL_EVENT_GAMEPAD_BUTTON_UP ) {
