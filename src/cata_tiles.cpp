@@ -8,6 +8,7 @@
 #    include "cata_utility.h"
 #    include "catacharset.h"
 #    include "character.h"
+#    include "controller.h"
 #    include "character_id.h"
 #    include "character_state_provider.h"
 #    include "clzones.h"
@@ -4153,6 +4154,15 @@ void cata_tiles::draw( point dest, const tripoint_bub_ms &center, int width, int
                 tile, pos, std::nullopt, std::nullopt,
                 lit_level::LIT, false, 0, false );
         }
+    }
+
+    if( gamepad::world_preview_visible() ) {
+        const tile_search_params tile{ "cursor", C_NONE, empty_string, 0, 0 };
+        const auto target = g->u.bub_pos() + gamepad::direction_offset(
+                                gamepad::get_left_stick_direction() );
+        const auto pos = tripoint_bub_ms( target.xy(), center.z() );
+        draw_from_id_string( tile, pos, std::nullopt, std::nullopt,
+                             lit_level::LIT, false, 0, false );
     }
 
     const bool draw_submap_grid = g->debug_submap_grid_overlay ||

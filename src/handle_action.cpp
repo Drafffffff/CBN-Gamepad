@@ -1,4 +1,7 @@
 #include "action.h"
+#if defined(TILES)
+#include "controller.h"
+#endif
 #include "advanced_inv.h"
 #include "animation.h"
 #include "armor_layers.h"
@@ -369,6 +372,9 @@ input_context game::get_player_input( std::string &action )
             ctxt.register_action( "QUIT", to_translation( "Accept your fate" ) );
         } else {
             ctxt = get_default_mode_input_context();
+#if defined(TILES)
+            ctxt.register_action( "controller_interact", to_translation( "Interact" ) );
+#endif
         }
     }
 
@@ -1940,6 +1946,20 @@ bool game::handle_action()
     // If performing an action with right mouse button, co-ordinates
     // of location clicked.
     std::optional<tripoint_bub_ms> mouse_target;
+#if defined(TILES)
+    const auto directed_actions = std::array { "controller_interact", "open", "close", "smash",
+        "grab", "examine", "pickup", "peek", "drop_adj", "control_vehicle"
+                                             };
+    const auto selected_direction = gamepad::is_active() && !gamepad::is_alt_held() &&
+                                    std::ranges::find( directed_actions, action ) != directed_actions.end() ?
+                                    gamepad::get_left_stick_direction() : gamepad::direction::NONE;
+    const auto selected_tile = u.bub_pos() + gamepad::direction_offset( selected_direction );
+    const auto target_scope = gamepad::target_scope( selected_direction );
+    if( selected_direction != gamepad::direction::NONE && ( action == "examine" || action == "pickup" ) ) {
+        mouse_target = selected_tile;
+        gamepad::take_target();
+    }
+#endif
 
     if( uquit == QUIT_WATCH && action == "QUIT" ) {
         uquit = QUIT_DIED;
@@ -1949,6 +1969,29 @@ bool game::handle_action()
     if( act == ACTION_NULL ) {
         ZoneScopedN( "handle_action_resolve_action" );
         act = look_up_action( action );
+#if defined(TILES)
+        if( action == "controller_interact" ) {
+            // Match CDDA's tile interaction: discover native applicable actions,
+            // execute a sole action, otherwise let the player choose.
+            const auto available = gamepad::interact_actions( selected_tile );
+            if( available.empty() ) { return false; }
+            if( available.size() == 1 ) { act = available.front(); }
+            else {
+                auto menu = uilist{};
+                menu.title = _( "Actions for this tile" );
+                for( const auto candidate : available ) {
+                    menu.addentry( candidate, true, 0, ctxt.get_action_name( action_ident( candidate ) ) );
+                }
+                menu.query();
+                if( menu.ret < 0 ) { return false; }
+                act = static_cast<action_id>( menu.ret );
+            }
+            if( act == ACTION_EXAMINE || act == ACTION_PICKUP ) {
+                mouse_target = selected_tile;
+                gamepad::take_target();
+            }
+        }
+#endif
 
         if( act == ACTION_KEYBINDINGS ) {
             // already handled by input context
@@ -2513,6 +2556,12 @@ bool game::handle_action()
                 break;
 
             case ACTION_CHAT:
+#if defined(TILES)
+                if( action == "controller_interact" ) {
+                    if( auto *target = critter_at<npc>( selected_tile ) ) { npc_menu( *target ); }
+                    break;
+                }
+#endif
                 chat();
                 break;
 

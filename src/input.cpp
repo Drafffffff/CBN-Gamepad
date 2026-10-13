@@ -1050,6 +1050,14 @@ const std::string &input_context::handle_input( const int timeout )
             inp_mngr.reset_timeout();
             display_menu();
             inp_mngr.set_timeout( timeout );
+#if defined(TILES)
+            const auto selected = gamepad::take_action( *this );
+            const auto registered = std::ranges::find( registered_actions, selected );
+            if( !selected.empty() && registered != registered_actions.end() ) {
+                result = &*registered;
+                break;
+            }
+#endif
             result = &HELP_KEYBINDINGS;
             break;
         }
@@ -1552,12 +1560,18 @@ int input_manager::get_previously_pressed_key() const
 
 void input_manager::wait_for_any_key()
 {
-#if defined(__ANDROID__)
-    input_context ctxt( "WAIT_FOR_ANY_KEY" );
+#if defined(TILES) || defined(__ANDROID__)
+    const auto ctxt = input_context( "WAIT_FOR_ANY_KEY" );
+#endif
+#if defined(TILES)
+    const auto scope = gamepad::context_scope( ctxt );
 #endif
     while( true ) {
         const input_event evt = inp_mngr.get_input_event();
         switch( evt.type ) {
+            case input_event_t::gamepad:
+                if( !evt.sequence.empty() ) { return; }
+                break;
             case input_event_t::keyboard:
                 if( !evt.sequence.empty() ) {
                     return;

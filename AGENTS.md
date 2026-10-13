@@ -154,6 +154,8 @@ rg -C2 -i 'speedway' lang/po/ko.po | rg -v '^(#:|--)' | head -n 20
 
 ## Controller port validation
 
+- A controller port must include native world rendering and action-target semantics, not only SDL routing and bindings. Compare the installed reference's eight-direction preview, trigger-gated movement, selected-tile actions, nested cancellation, and action reachability. Screenshot counts alone do not establish any of these behaviors; inspect contents and assert world position/turn invariants.
+
 - Validate the real Steam input device path as well as virtual fixtures. A fixture that filters all keyboard and mouse events cannot establish that mixed Steam input works. Cover left-stick menu navigation separately from trigger-gated gameplay movement.
 
 - Desktop input contexts do not expose Android-only getters; use the const controller category accessor and registered-action copy.
@@ -167,3 +169,5 @@ rg -C2 -i 'speedway' lang/po/ko.po | rg -v '^(#:|--)' | head -n 20
 - BN shares its key-name lookup between keyboard and gamepad. Prefix all new gamepad binding names with `PAD_`; unprefixed `A`/`UP` silently overwrite keyboard codes. Test keyboard-name preservation alongside controller bindings.
 - Reserving footer rows can leave fewer than the historical 24 main-menu rows. Clamp the menu window to the current terminal size; `newwin` outside it returns an invalid window and later width arithmetic can divide by zero.
 - Direction prompts reuse `DEFAULTMODE` without registering gameplay actions. Classify menu routing from the registered actions too, or B remains a gameplay grab event instead of cancelling the prompt.
+
+- Controller smoke fixtures must validate the entered screen and keep synthesized press/release pairs consistent; timestamp-dependent menu conversion must include the release event, otherwise a held stick can silently choose a different new-game path.

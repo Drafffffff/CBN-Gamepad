@@ -344,15 +344,19 @@ static void debug_error_prompt(
         wnoutrefresh( catacurses::stdscr );
     } );
 
-#if defined(__ANDROID__)
     input_context ctxt( "DEBUG_MSG" );
+    ctxt.register_action( "CONFIRM" );
+    ctxt.register_action( "ANY_INPUT" );
+#if defined(__ANDROID__)
     ctxt.register_manual_key( 'C' );
     ctxt.register_manual_key( 'I' );
     ctxt.register_manual_key( ' ' );
 #endif
     for( bool stop = false; !stop && !dont_debugmsg; ) {
         ui_manager::redraw();
-        switch( inp_mngr.get_input_event().get_first_input() ) {
+        const auto action = ctxt.handle_input();
+        const auto key = action == "CONFIRM" ? ' ' : ctxt.get_raw_input().get_first_input();
+        switch( key ) {
 #if defined(TILES)
             case 'c':
             case 'C':

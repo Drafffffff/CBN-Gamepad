@@ -23,6 +23,9 @@
 #include "options.h"
 #include "output.h"
 #include "path_info.h"
+#if defined(TILES)
+#include "controller.h"
+#endif
 #include "popup.h"
 #include "ret_val.h"
 #include "string_utils.h"
@@ -1264,6 +1267,13 @@ action_id handle_main_menu()
 std::optional<tripoint_rel_ms> choose_direction( const std::string &message,
         const bool allow_vertical )
 {
+#if defined(TILES)
+    if( const auto selected = gamepad::take_target() ) {
+        if( selected->x() > 0 ) { g->u.facing = FD_RIGHT; }
+        else if( selected->x() < 0 ) { g->u.facing = FD_LEFT; }
+        return selected;
+    }
+#endif
     input_context ctxt( "DEFAULTMODE" );
     ctxt.set_iso( true );
     ctxt.register_directions();
@@ -1347,6 +1357,14 @@ std::optional<tripoint_bub_ms> choose_adjacent_highlight(
     }
 
     const bool auto_select = get_option<bool>( "AUTOSELECT_SINGLE_VALID_TARGET" );
+#if defined(TILES)
+    if( const auto selected = gamepad::take_target() ) {
+        const auto target = g->u.bub_pos() + *selected;
+        if( std::ranges::contains( valid, target ) ) { return target; }
+        add_msg( failure_message );
+        return std::nullopt;
+    }
+#endif
     if( valid.empty() && auto_select ) {
         add_msg( failure_message );
         return std::nullopt;

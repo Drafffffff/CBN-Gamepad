@@ -5,6 +5,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <set>
+#include <utility>
+#include "game.h"
+#include "action.h"
+#include "avatar.h"
+#include "map/map.h"
+#include "npc.h"
 #include "catacharset.h"
 #include "options.h"
 #include "sdltiles.h"
@@ -23,12 +29,14 @@ auto left_dir = direction::NONE;
 auto right_dir = direction::NONE;
 auto require_center = std::array<bool, 2> {};
 auto trigger_down = std::array<bool, 2> {};
-auto repeat_event = input_event{};
-auto repeat_at = Uint64{0};
-auto repeat_button = -1;
+auto repeats = repeat_queue{};
 auto pending_action = std::string{};
 auto pending_context = static_cast<const input_context *>( nullptr );
 auto keyboard_help = false;
+auto selected_target = std::optional<tripoint_rel_ms> {};
+auto world_refresh = false;
+auto repeat_category = std::string{};
+auto repeat_menu = false;
 constexpr auto action_event = 0x7fff;
 auto get_alt_button( int base_code ) -> int
 {
@@ -69,6 +77,68 @@ auto get_alt_button( int base_code ) -> int
 }
 
 } // namespace
+
+auto repeat_queue::start( const repeat_request &request ) -> void
+{
+    tasks.insert_or_assign( request.control, task{ .event = request.event, .next = request.now + 400 } );
+}
+auto repeat_queue::stop( int control ) -> void { tasks.erase( control ); }
+auto repeat_queue::clear() -> void { tasks.clear(); }
+auto repeat_queue::take_due( Uint64 now ) -> std::optional<repeated_input>
+{
+    const auto next = std::ranges::min_element( tasks, {}, []( const auto & entry ) { return entry.second.next; } );
+    if( next == tasks.end() || next->second.next > now ) { return std::nullopt; }
+    next->second.next = now + 50;
+    return repeated_input{ .control = next->first, .event = next->second.event };
+}
+auto queue_action( const input_context &ctxt, const std::string &action ) -> bool
+{
+    if( action == "ANY_INPUT" || action == "COORDINATE" || action == "MOUSE_MOVE" ||
+        action == "HELP_KEYBINDINGS" ||
+        !std::ranges::contains( ctxt.get_registered_actions_copy(), action ) ) { return false; }
+    pending_context = &ctxt;
+    pending_action = action;
+    return true;
+}
+
+auto direction_offset( direction dir ) -> tripoint_rel_ms
+{
+    constexpr auto offsets = std::array<point, 9> { point_zero, point_north, point_north_east,
+        point_east, point_south_east, point_south, point_south_west, point_west, point_north_west
+                                                  };
+    const auto offset = offsets.at( static_cast<size_t>( dir ) );
+    return tripoint_rel_ms( offset.x, offset.y, 0 );
+}
+target_scope::target_scope( direction dir ) : previous( selected_target )
+{
+    selected_target = dir == direction::NONE ? std::nullopt : std::make_optional( direction_offset(
+                          dir ) );
+}
+target_scope::~target_scope() { selected_target = previous; }
+auto has_target() -> bool { return selected_target.has_value(); }
+auto take_target() -> std::optional<tripoint_rel_ms> { return std::exchange( selected_target, std::nullopt ); }
+auto take_world_refresh() -> bool { return std::exchange( world_refresh, false ); }
+auto world_preview_visible() -> bool
+{
+    return is_active() && ( !active_context || !uses_menu( *active_context ) ) &&
+           !alternate && !radial_input_captured() && left_dir != direction::NONE;
+}
+
+auto interact_actions( const tripoint_bub_ms &target ) -> std::vector<action_id>
+{
+    auto result = std::vector<action_id> {};
+    const auto position = get_avatar().bub_pos();
+    if( rl_dist( position, target ) > 1 || target.z() != position.z() ||
+        get_map().obstructed_by_vehicle_rotation( position, target ) ) { return result; }
+    for( const auto candidate : {
+             ACTION_EXAMINE, ACTION_PICKUP, ACTION_OPEN, ACTION_CLOSE,
+             ACTION_BUTCHER, ACTION_MOVE_UP, ACTION_MOVE_DOWN
+         } ) {
+        if( can_interact_at( candidate, target ) ) { result.push_back( candidate ); }
+    }
+    if( g->critter_at<npc>( target ) && get_avatar().sees( target ) ) { result.push_back( ACTION_CHAT ); }
+    return result;
+}
 
 auto radial_state::move( int stick, direction dir ) -> bool
 {
@@ -141,6 +211,8 @@ auto radial_entries( const input_context &ctxt, int page ) -> std::array<radial_
         { .action = "CHOOSE_DESTINATION", .page = 0 }, { .action = "GO_TO_DESTINATION", .page = 0 }, { .action = "CENTER_ON_DESTINATION", .page = 0 },
         { .action = "TRAVEL_TO", .page = 0 }, { .action = "CENTER", .page = 0 }, { .action = "SEARCH", .page = 0 }, { .action = "CREATE_POINT_OF_INTEREST", .page = 0 },
         { .action = "EXAMINE", .page = 0 }, { .action = "LOOK", .page = 0 }, { .action = "peek", .page = 0 },
+        { .action = "LOOK_AT", .page = 0 }, { .action = "SIZE_UP_STATS", .page = 0 },
+        { .action = "YELL", .page = 0 }, { .action = "CHECK_OPINION", .page = 3 },
         { .action = "SORT", .page = 1 }, { .action = "FILTER", .page = 1 }, { .action = "RESET_FILTER", .page = 1 }, { .action = "INVENTORY_FILTER", .page = 1 },
         { .action = "MOVE_SINGLE_ITEM", .page = 1 }, { .action = "MOVE_ITEM_STACK", .page = 1 }, { .action = "MOVE_ALL_ITEMS", .page = 1 },
         { .action = "TOGGLE_FAVORITE", .page = 1 },
@@ -376,6 +448,12 @@ auto event_for_control( int code, bool alternate, bool menu ) -> input_event
 
 context_scope::context_scope( const input_context &ctxt ) : previous( active_context )
 {
+    const auto menu = uses_menu( ctxt );
+    if( repeat_category != ctxt.controller_category() || repeat_menu != menu ) {
+        repeats.clear();
+        repeat_category = ctxt.controller_category();
+        repeat_menu = menu;
+    }
     active_context = &ctxt;
     if( previous != &ctxt && is_active() ) { request_refresh(); }
 }
@@ -395,7 +473,7 @@ auto uses_menu( const input_context &ctxt ) -> bool
     // Direction prompts reuse DEFAULTMODE, but do not register the gameplay menu.
     const auto actions = ctxt.get_registered_actions_copy();
     return ctxt.controller_category() != "DEFAULTMODE" ||
-           std::ranges::find( actions, "main_menu" ) == actions.end();
+           std::ranges::find( actions, "QUIT" ) != actions.end();
 }
 auto init() -> void
 {
@@ -409,6 +487,7 @@ auto init() -> void
 }
 auto quit() -> void
 {
+    if( g && left_dir != direction::NONE ) { g->invalidate_main_ui_adaptor(); }
     if( controller ) { SDL_CloseGamepad( controller ); }
     controller = nullptr;
     radial.release();
@@ -416,7 +495,9 @@ auto quit() -> void
     left_dir = right_dir = direction::NONE;
     trigger_down.fill( false );
     require_center.fill( false );
-    repeat_at = 0;
+    selected_target.reset();
+    world_refresh = true;
+    repeats.clear();
     pending_action.clear();
     pending_context = nullptr;
 }
@@ -450,18 +531,17 @@ auto axis_direction( int stick ) -> direction
 }
 auto start_repeat( int button, const input_event &event ) -> void
 {
-    repeat_button = button;
-    repeat_event = event;
-    repeat_at = SDL_GetTicks() + 400;
+    repeats.start( { .control = button, .event = event, .now = SDL_GetTicks() } );
     send( event );
 }
 }
 auto tick() -> bool
 {
-    if( !is_active() || alternate || !repeat_at || SDL_GetTicks() < repeat_at ) { return false; }
-    repeat_at = SDL_GetTicks() + 100;
-    send( repeat_button == PAD_RT &&
-          left_dir != direction::NONE ? mapped( stick_code( left_dir, false ) ) : repeat_event );
+    if( !is_active() || alternate ) { return false; }
+    const auto due = repeats.take_due( SDL_GetTicks() );
+    if( !due ) { return false; }
+    send( due->control == PAD_RT &&
+          left_dir != direction::NONE ? mapped( stick_code( left_dir, false ) ) : due->event );
     return true;
 }
 auto handle_event( const SDL_Event &event ) -> bool
@@ -492,7 +572,9 @@ auto handle_event( const SDL_Event &event ) -> bool
             trigger_down[index] = down;
             if( index == 0 ) {
                 alternate = down;
-                repeat_at = 0;
+                if( g ) { g->invalidate_main_ui_adaptor(); }
+                world_refresh = true;
+                repeats.clear();
                 if( down ) { radial.release(); }
                 else {
                     const auto captured = radial_input_captured();
@@ -505,8 +587,7 @@ auto handle_event( const SDL_Event &event ) -> bool
                         const auto entry = radial_entries( *active_context,
                                                            selection.page )[static_cast<int>( selection.dir ) - 1];
                         if( entry.available ) {
-                            pending_context = active_context;
-                            pending_action = entry.action;
+                            queue_action( *active_context, entry.action );
                             send( input_event( action_event, input_event_t::gamepad ) );
                         }
                     }
@@ -516,7 +597,7 @@ auto handle_event( const SDL_Event &event ) -> bool
                     const auto code = !alternate &&
                                       left_dir != direction::NONE ? stick_code( left_dir, false ) : PAD_RT;
                     start_repeat( PAD_RT, mapped( code ) );
-                } else if( repeat_button == PAD_RT ) { repeat_at = 0; }
+                } else { repeats.stop( PAD_RT ); }
             }
             request_refresh();
             return true;
@@ -530,11 +611,15 @@ auto handle_event( const SDL_Event &event ) -> bool
         auto &old = stick == 0 ? left_dir : right_dir;
         const auto changed = old != dir;
         old = dir;
-        if( alternate ) { radial.move( stick, dir ); repeat_at = 0; }
+        if( changed && stick == 0 && g && !alternate ) {
+            g->invalidate_main_ui_adaptor();
+            world_refresh = true;
+        }
+        if( alternate ) { radial.move( stick, dir ); repeats.clear(); }
         else if( changed && ( stick == 1 || ( active_context && uses_menu( *active_context ) ) ) ) {
             const auto repeat_control = stick == 0 ? PAD_LS : PAD_RS;
             if( dir == direction::NONE ) {
-                if( repeat_button == repeat_control ) { repeat_at = 0; }
+                repeats.stop( repeat_control );
             } else {
                 start_repeat( repeat_control, mapped( stick_code( dir, stick == 1 ) ) );
             }
@@ -546,7 +631,7 @@ auto handle_event( const SDL_Event &event ) -> bool
         if( event.gbutton.which != SDL_GetGamepadID( controller ) ) { return true; }
         const auto button = event.gbutton.button;
         if( event.type == SDL_EVENT_GAMEPAD_BUTTON_UP ) {
-            if( repeat_button == button ) { repeat_at = 0; }
+            repeats.stop( button );
             return true;
         }
         if( radial_input_captured() ) {
@@ -622,10 +707,14 @@ auto show_bindings( const input_context &ctxt ) -> bool
     menu.title = _( "Controller shortcuts" );
     menu.text = _( "LT + ☰: shortcuts · Ⓐ: select · Ⓑ: back" );
     menu.addentry( 0, true, 'k', _( "Keyboard bindings" ) );
+    auto actions = std::vector<std::string> {};
     for( const auto &action : ctxt.get_registered_actions_copy() ) {
-        if( action == "ANY_INPUT" || action == "COORDINATE" ) { continue; }
+        if( action == "ANY_INPUT" || action == "COORDINATE" || action == "MOUSE_MOVE" ||
+            action == "HELP_KEYBINDINGS" ) { continue; }
         const auto hint = action_hint( ctxt, action );
-        menu.addentry( -1, false, 0, ( hint.empty() ? _( "No direct controller binding" ) : hint ) + "  " +
+        actions.push_back( action );
+        menu.addentry( static_cast<int>( actions.size() ), true, 0,
+                       ( hint.empty() ? _( "No direct controller binding" ) : hint ) + "  " +
                        ctxt.get_action_name( action ) );
     }
     menu.hilight_disabled = true;
@@ -635,6 +724,8 @@ auto show_bindings( const input_context &ctxt ) -> bool
         try { const_cast<input_context &>( ctxt ).display_menu(); }
         catch( ... ) { keyboard_help = false; throw; }
         keyboard_help = false;
+    } else if( menu.ret > 0 && static_cast<size_t>( menu.ret ) <= actions.size() ) {
+        queue_action( ctxt, actions[menu.ret - 1] );
     }
     return true;
 }

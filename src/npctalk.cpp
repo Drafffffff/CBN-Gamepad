@@ -2187,8 +2187,19 @@ talk_topic dialogue::opt( dialogue_window &d_win, const std::string &npc_name,
     }
     auto selected_response = size_t{ 0 };
 
-#if defined(__ANDROID__)
     input_context ctxt( "DIALOGUE_CHOOSE_RESPONSE" );
+    ctxt.register_updown();
+    ctxt.register_action( "CONFIRM" );
+    ctxt.register_action( "QUIT" );
+    ctxt.register_action( "PAGE_UP" );
+    ctxt.register_action( "PAGE_DOWN" );
+    ctxt.register_action( "LOOK_AT", to_translation( "Look at" ) );
+    ctxt.register_action( "SIZE_UP_STATS", to_translation( "Size up stats" ) );
+    ctxt.register_action( "YELL", to_translation( "Yell" ) );
+    ctxt.register_action( "CHECK_OPINION", to_translation( "Check opinion" ) );
+    ctxt.register_action( "ANY_INPUT" );
+    ctxt.register_action( "HELP_KEYBINDINGS" );
+#if defined(__ANDROID__)
     for( size_t i = 0; i < responses.size(); i++ ) {
         ctxt.register_manual_key( 'a' + i );
     }
@@ -2216,7 +2227,26 @@ talk_topic dialogue::opt( dialogue_window &d_win, const std::string &npc_name,
         d_win.refresh_response_display();
         do {
             ui_manager::redraw();
-            ch = inp_mngr.get_input_event().get_first_input();
+            const auto action = ctxt.handle_input();
+            ch = ctxt.get_raw_input().get_first_input();
+            if( action == "HELP_KEYBINDINGS" ) { continue; }
+            if( action == "UP" ) { ch = KEY_UP; }
+            if( action == "DOWN" ) { ch = KEY_DOWN; }
+            if( action == "PAGE_UP" ) { ch = KEY_PPAGE; }
+            if( action == "PAGE_DOWN" ) { ch = KEY_NPAGE; }
+            if( action == "CONFIRM" ) { ch = '\n'; }
+            if( action == "LOOK_AT" ) { ch = 'L'; }
+            if( action == "SIZE_UP_STATS" ) { ch = 'S'; }
+            if( action == "YELL" ) { ch = 'Y'; }
+            if( action == "CHECK_OPINION" ) { ch = 'O'; }
+            if( action == "QUIT" ) {
+                const auto quit = std::ranges::find_if( responses, [&]( const auto & response ) {
+                    return responses.size() == 1 || ( response.trial.calc_chance( *this ) == 100 &&
+                           response.success.effects.empty() && response.success.next_topic.id == "TALK_DONE" );
+                } );
+                if( quit == responses.end() ) { continue; }
+                ch = static_cast<int>( std::ranges::distance( responses.begin(), quit ) ) + 'a';
+            }
             if( ch == KEY_UP ) {
                 if( selected_response > 0 ) {
                     selected_response -= 1;

@@ -1,6 +1,7 @@
 #pragma once
 #if defined(TILES)
 #include <array>
+#include <map>
 #include <string>
 #include <vector>
 #include "input.h"
@@ -96,6 +97,35 @@ inline constexpr auto PAD_R_RADIAL_NW = 4096 + 79;
 namespace gamepad
 {
 enum class direction : int { NONE = 0, N, NE, E, SE, S, SW, W, NW };
+/// Selected world direction is scoped to one action and consumed by its first target prompt.
+class target_scope
+{
+        std::optional<tripoint_rel_ms> previous;
+    public:
+        explicit target_scope( direction dir );
+        ~target_scope();
+        target_scope( const target_scope & ) = delete;
+        auto operator=( const target_scope & ) -> target_scope & = delete; // *NOPAD*
+};
+auto direction_offset( direction dir ) -> tripoint_rel_ms;
+auto has_target() -> bool;
+auto take_target() -> std::optional<tripoint_rel_ms>;
+auto take_world_refresh() -> bool;
+auto world_preview_visible() -> bool;
+auto interact_actions( const tripoint_bub_ms &target ) -> std::vector<action_id>;
+struct repeat_request { int control; input_event event; Uint64 now; };
+struct repeated_input { int control; input_event event; };
+class repeat_queue
+{
+        struct task { input_event event; Uint64 next; };
+        std::map<int, task> tasks;
+    public:
+        auto start( const repeat_request &request ) -> void;
+        auto stop( int control ) -> void;
+        auto clear() -> void;
+        auto take_due( Uint64 now ) -> std::optional<repeated_input>;
+};
+auto queue_action( const input_context &ctxt, const std::string &action ) -> bool;
 struct radial_selection { int page = 0; direction dir = direction::NONE; };
 class radial_state
 {

@@ -1923,7 +1923,7 @@
     "name": "Examine Nearby Terrain",
     "category": "DEFAULTMODE",
     "id": "examine",
-    "bindings": [ { "input_method": "keyboard", "key": "e" }, { "input_method": "gamepad", "key": "PAD_A" } ]
+    "bindings": [ { "input_method": "keyboard", "key": "e" } ]
   },
   {
     "type": "keybinding",
@@ -4182,5 +4182,31 @@
     "id": "CONFIRM",
     "name": "Advanced Inventory Manager",
     "bindings": [ { "input_method": "keyboard", "key": "RETURN" } ]
+  },
+  {
+    "id": "controller_interact",
+    "category": "DEFAULTMODE",
+    "name": "Interact",
+    "bindings": [ { "input_method": "gamepad", "key": "PAD_A" } ]
+  },
+  {
+    "id": "LOOK_AT",
+    "category": "DIALOGUE_CHOOSE_RESPONSE",
+    "bindings": [ { "input_method": "keyboard", "key": "L" }, { "input_method": "gamepad", "key": "PAD_L_RADIAL_N" } ]
+  },
+  {
+    "id": "SIZE_UP_STATS",
+    "category": "DIALOGUE_CHOOSE_RESPONSE",
+    "bindings": [ { "input_method": "keyboard", "key": "S" }, { "input_method": "gamepad", "key": "PAD_L_RADIAL_NE" } ]
+  },
+  {
+    "id": "YELL",
+    "category": "DIALOGUE_CHOOSE_RESPONSE",
+    "bindings": [ { "input_method": "keyboard", "key": "Y" }, { "input_method": "gamepad", "key": "PAD_L_RADIAL_E" } ]
+  },
+  {
+    "id": "CHECK_OPINION",
+    "category": "DIALOGUE_CHOOSE_RESPONSE",
+    "bindings": [ { "input_method": "keyboard", "key": "O" }, { "input_method": "gamepad", "key": "PAD_L_RADIAL_S" } ]
   }
 ]

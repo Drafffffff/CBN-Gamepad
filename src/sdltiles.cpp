@@ -3615,6 +3615,10 @@ static void CheckMessages()
             break;
         }
     }
+    if( gamepad::take_world_refresh() ) {
+        restore_on_out_of_scope<input_event> prev_last_input( last_input );
+        ui_manager::redraw_invalidated();
+    }
     bool resized = false;
     if( resize_dims.has_value() ) {
         restore_on_out_of_scope<input_event> prev_last_input( last_input );

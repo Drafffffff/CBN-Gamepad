@@ -8058,7 +8058,11 @@ void game::control_vehicle()
         if( num_valid_controls < 1 ) {
             add_msg( _( "No vehicle controls found." ) );
             return;
-        } else if( num_valid_controls > 1 ) {
+        } else if( num_valid_controls > 1
+#if defined(TILES)
+                   || gamepad::has_target()
+#endif
+                 ) {
             vehicle_position = choose_adjacent( _( "Control vehicle where?" ) );
             if( !vehicle_position ) {
                 return;
