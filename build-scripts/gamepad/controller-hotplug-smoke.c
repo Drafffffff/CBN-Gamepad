@@ -36,7 +36,9 @@ SDL_JoystickID *SDL_GetGamepads(int *count) {
 }
 Sint16 SDL_GetGamepadAxis(SDL_Gamepad *pad,SDL_GamepadAxis axis) {
     Sint16 (*real_axis)(SDL_Gamepad *,SDL_GamepadAxis)=dlsym(RTLD_NEXT,"SDL_GetGamepadAxis");
-    return SDL_GetGamepadID(pad)==fixture ? axes[axis] : real_axis(pad,axis);
+    Sint16 result=SDL_GetGamepadID(pad)==fixture ? axes[axis] : real_axis(pad,axis);
+    if(result && getenv("CBN_GAMEPAD_TRACE"))fprintf(stderr,"fixture axis: selected=%u fixture=%u axis=%d value=%d\n",SDL_GetGamepadID(pad),fixture,axis,result);
+    return result;
 }
 struct step { Uint64 at; int kind; int key; int value; };
 static const struct step steps[]={
@@ -45,9 +47,11 @@ static const struct step steps[]={
     {7300,2,SDLK_RETURN,0},
     {9000,2,SDLK_RETURN,0},
     {44000,5,0,0},
-    {46000,0,SDL_GAMEPAD_AXIS_RIGHTX,52000},
+    {45000,1,SDL_GAMEPAD_BUTTON_MISC1,1},
+    {45050,1,SDL_GAMEPAD_BUTTON_MISC1,0},
+    {46000,0,SDL_GAMEPAD_AXIS_RIGHTX,26000},
     {46200,0,SDL_GAMEPAD_AXIS_RIGHTX,0},
-    {50000,0,SDL_GAMEPAD_AXIS_LEFTY,-52000},
+    {50000,0,SDL_GAMEPAD_AXIS_LEFTY,-26000},
     {54000,0,SDL_GAMEPAD_AXIS_LEFTY,0}
 
 };

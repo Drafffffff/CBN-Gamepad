@@ -187,3 +187,5 @@ rg -C2 -i 'speedway' lang/po/ko.po | rg -v '^(#:|--)' | head -n 20
 - Hotplug layout refresh requires an existing SDL window. Headless controller tests initialize SDL gamepads without font/window state, so never divide by font/scaling metrics in that path.
 
 - Xvfb controller smoke tests need an explicit focus-gained event after attaching the virtual controller. Clear LD_PRELOAD/LD_LIBRARY_PATH in external screenshot subprocesses. Load a known saved test character, not an unsaved world stub; check screenshot contents before marking world tests passed.
+
+- Virtual hotplug fixtures must filter physical device-added events, log the selected device, and keep stick axis values within Sint16 range. Delay world controls until the loading progress UI has finished; do not replace timing literals globally when axis values share the same number.
