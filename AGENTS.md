@@ -185,3 +185,5 @@ rg -C2 -i 'speedway' lang/po/ko.po | rg -v '^(#:|--)' | head -n 20
 - Reserve controller footer space after hotplug as well as initial startup and resize. Test with no controller at launch, connect after loading, and inspect the last visible log line. CDDA's right-stick cursor marks the shifted view center, while its left-stick cursor selects an adjacent interaction tile; preserve those distinct actions when improving visual priority.
 
 - Hotplug layout refresh requires an existing SDL window. Headless controller tests initialize SDL gamepads without font/window state, so never divide by font/scaling metrics in that path.
+
+- Xvfb controller smoke tests need an explicit focus-gained event after attaching the virtual controller. Clear LD_PRELOAD/LD_LIBRARY_PATH in external screenshot subprocesses. Load a known saved test character, not an unsaved world stub; check screenshot contents before marking world tests passed.
