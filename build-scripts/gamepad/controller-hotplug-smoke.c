@@ -9,7 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
-static SDL_JoystickID fixture;
+static SDL_JoystickID fixture, detached_fixture;
 static Uint64 begin;
 static unsigned stage, saved;
 static Sint16 axes[SDL_GAMEPAD_AXIS_COUNT];
@@ -70,10 +70,12 @@ bool SDL_PollEvent(SDL_Event *event) {
         fprintf(stderr,"hotplug attached=%u elapsed=%llu\n",fixture,(unsigned long long)hotplug_elapsed);
     }
     if(getenv("CBN_SMOKE_HOTPLUG") && connection_stage==1 && hotplug_elapsed>58000) {
-        SDL_DetachVirtualJoystick(fixture);fixture=0;connection_stage++;
+        detached_fixture=fixture;SDL_DetachVirtualJoystick(fixture);fixture=0;connection_stage++;
         fprintf(stderr,"hotplug detached elapsed=%llu\n",(unsigned long long)hotplug_elapsed);
     }
     while(real_poll(event)) {
+        if(event && (event->type==SDL_EVENT_GAMEPAD_ADDED || event->type==SDL_EVENT_GAMEPAD_REMOVED) &&
+           event->gdevice.which!=fixture && event->gdevice.which!=detached_fixture)continue;
         if(event && ((event->type>=SDL_EVENT_KEY_DOWN && event->type<=SDL_EVENT_KEYMAP_CHANGED) ||
           (event->type>=SDL_EVENT_MOUSE_MOTION && event->type<=SDL_EVENT_MOUSE_WHEEL) ||
           event->type==SDL_EVENT_GAMEPAD_BUTTON_DOWN || event->type==SDL_EVENT_GAMEPAD_BUTTON_UP ||
