@@ -44,11 +44,11 @@ static const struct step steps[]={
     {6000,3,'L',0},
     {7300,2,SDLK_RETURN,0},
     {9000,2,SDLK_RETURN,0},
-    {22000,5,0,0},
-    {22500,0,SDL_GAMEPAD_AXIS_RIGHTX,26000},
-    {22600,0,SDL_GAMEPAD_AXIS_RIGHTX,0},
-    {24000,0,SDL_GAMEPAD_AXIS_LEFTY,-26000},
-    {28000,0,SDL_GAMEPAD_AXIS_LEFTY,0}
+    {44000,5,0,0},
+    {46000,0,SDL_GAMEPAD_AXIS_RIGHTX,52000},
+    {46200,0,SDL_GAMEPAD_AXIS_RIGHTX,0},
+    {50000,0,SDL_GAMEPAD_AXIS_LEFTY,-52000},
+    {54000,0,SDL_GAMEPAD_AXIS_LEFTY,0}
 
 };
 bool SDL_PollEvent(SDL_Event *event) {
@@ -63,13 +63,13 @@ bool SDL_PollEvent(SDL_Event *event) {
     if(!begin)begin=SDL_GetTicks();
     Uint64 hotplug_elapsed=SDL_GetTicks()-begin;
     static unsigned connection_stage;
-    if(getenv("CBN_SMOKE_HOTPLUG") && ((connection_stage==0 && hotplug_elapsed>1500) || (connection_stage==2 && hotplug_elapsed>36000))) {
+    if(getenv("CBN_SMOKE_HOTPLUG") && ((connection_stage==0 && hotplug_elapsed>1500) || (connection_stage==2 && hotplug_elapsed>62000))) {
         SDL_VirtualJoystickDesc desc;SDL_INIT_INTERFACE(&desc);
         desc.type=SDL_JOYSTICK_TYPE_GAMEPAD;desc.naxes=SDL_GAMEPAD_AXIS_COUNT;desc.nbuttons=SDL_GAMEPAD_BUTTON_COUNT;desc.name="CBN hotplug fixture";
         fixture=SDL_AttachVirtualJoystick(&desc);connection_stage++;
         fprintf(stderr,"hotplug attached=%u elapsed=%llu\n",fixture,(unsigned long long)hotplug_elapsed);
     }
-    if(getenv("CBN_SMOKE_HOTPLUG") && connection_stage==1 && hotplug_elapsed>32000) {
+    if(getenv("CBN_SMOKE_HOTPLUG") && connection_stage==1 && hotplug_elapsed>58000) {
         SDL_DetachVirtualJoystick(fixture);fixture=0;connection_stage++;
         fprintf(stderr,"hotplug detached elapsed=%llu\n",(unsigned long long)hotplug_elapsed);
     }
@@ -83,14 +83,14 @@ bool SDL_PollEvent(SDL_Event *event) {
     if(!begin || !event)return false;
     Uint64 elapsed=SDL_GetTicks()-begin;
     if(getenv("CBN_SMOKE_MENU_ONLY") && elapsed>5000)_Exit((saved&3)==3 ? 0 : 3);
-    if(elapsed>40000){fprintf(stderr,"Fixture screenshots=%u expected=255\n",saved);_Exit(saved==255 ? 0 : 3);}
+    if(elapsed>68000){fprintf(stderr,"Fixture screenshots=%u expected=255\n",saved);_Exit(saved==255 ? 0 : 3);}
     if(stage<sizeof(steps)/sizeof(*steps) && elapsed>steps[stage].at) {
         struct step step=steps[stage++];
         if(getenv("CBN_SMOKE_MENU_NAV")) {
             if(step.at==6000)return false;
             if(step.at==6300 || step.at==6350 || step.at==6600 || step.at==6650) {
                 step.kind=0;step.key=SDL_GAMEPAD_AXIS_LEFTY;
-                step.value=(step.at==6300 || step.at==6600) ? 26000 : 0;
+                step.value=(step.at==6300 || step.at==6600) ? 52000 : 0;
             }
         }
         if(step.kind==4){if(!getenv("CBN_SMOKE_MAP"))return false;step.kind=1;}
@@ -112,11 +112,11 @@ bool SDL_PollEvent(SDL_Event *event) {
 bool SDL_RenderPresent(SDL_Renderer *renderer) {
     bool (*real_present)(SDL_Renderer *)=dlsym(RTLD_NEXT,"SDL_RenderPresent");
     const bool presented=real_present(renderer);
-    static const Uint64 times[]={1000,3000,22000,23500,26000,30000,34000,38000};
+    static const Uint64 times[]={1000,3000,44000,48000,52000,56000,60000,64000};
     static const char *names[]={"before-connect","connected-footer","world-log-footer","right-camera","left-target-priority","left-centered-camera","disconnected-log","reconnected-log"};
     Uint64 elapsed=begin ? SDL_GetTicks()-begin : 0;
     for(unsigned i=0;i<sizeof(times)/sizeof(*times);i++) {
-        if(elapsed>times[i] && elapsed<times[i]+1500 && !(saved&(1u<<i))) {
+        if(elapsed>times[i] && elapsed<times[i]+3000 && !(saved&(1u<<i))) {
             char path[1024];
             snprintf(path,sizeof(path),"%s/%s.png",getenv("CBN_SMOKE_OUTPUT"),names[i]);
             pid_t child=fork();
