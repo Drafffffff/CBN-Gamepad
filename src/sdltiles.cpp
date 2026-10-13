@@ -3223,12 +3223,11 @@ static void CheckMessages()
 #endif
 
     last_input = input_event();
-    const auto controller_repeat = gamepad::tick();
 
     std::optional<point> resize_dims;
     bool render_target_reset = false;
 
-    while( !controller_repeat && SDL_PollEvent( &ev ) ) {
+    while( SDL_PollEvent( &ev ) ) {
         if( gamepad::handle_event( ev ) ) {
             needupdate = true;
             // Deliver each routed controller press before later SDL events can replace it.
@@ -3615,6 +3614,9 @@ static void CheckMessages()
             break;
         }
     }
+    // Releases and focus changes must be processed before a due repeat. A slow
+    // game turn must never starve the event queue behind continuous movement.
+    if( last_input.type == input_event_t::error ) { gamepad::tick(); }
     if( gamepad::take_world_refresh() ) {
         restore_on_out_of_scope<input_event> prev_last_input( last_input );
         ui_manager::redraw_invalidated();

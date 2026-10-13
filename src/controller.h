@@ -155,6 +155,8 @@ class context_scope
 auto current_context() -> const input_context *; // *NOPAD*
 auto init() -> void;
 auto quit() -> void;
+/// Clear held physical input after focus changes without disconnecting the controller.
+auto reset_inputs() -> void;
 auto is_active() -> bool;
 auto is_alt_held() -> bool;
 auto uses_menu( const input_context &ctxt ) -> bool;

@@ -29,6 +29,8 @@ auto left_dir = direction::NONE;
 auto right_dir = direction::NONE;
 auto require_center = std::array<bool, 2> {};
 auto trigger_down = std::array<bool, 2> {};
+auto trigger_require_release = std::array<bool, 2> {};
+auto input_suspended = false;
 auto repeats = repeat_queue{};
 auto pending_action = std::string{};
 auto pending_context = static_cast<const input_context *>( nullptr );
@@ -485,6 +487,27 @@ auto init() -> void
     SDL_free( ids );
     SDL_SetGamepadEventsEnabled( true );
 }
+auto reset_inputs() -> void
+{
+    if( g ) { g->invalidate_main_ui_adaptor(); }
+    radial.release();
+    alternate = false;
+    left_dir = right_dir = direction::NONE;
+    trigger_down.fill( false );
+    for( auto i = 0; i < 2; ++i ) {
+        const auto x = controller ? SDL_GetGamepadAxis( controller,
+                       i == 0 ? SDL_GAMEPAD_AXIS_LEFTX : SDL_GAMEPAD_AXIS_RIGHTX ) : 0;
+        const auto y = controller ? SDL_GetGamepadAxis( controller,
+                       i == 0 ? SDL_GAMEPAD_AXIS_LEFTY : SDL_GAMEPAD_AXIS_RIGHTY ) : 0;
+        require_center[i] = std::hypot( x, y ) >= 16000;
+        trigger_require_release[i] = controller && SDL_GetGamepadAxis( controller,
+                                     i == 0 ? SDL_GAMEPAD_AXIS_LEFT_TRIGGER : SDL_GAMEPAD_AXIS_RIGHT_TRIGGER ) > 14000;
+    }
+    world_refresh = true;
+    repeats.clear();
+    pending_action.clear();
+    pending_context = nullptr;
+}
 auto quit() -> void
 {
     if( g && left_dir != direction::NONE ) { g->invalidate_main_ui_adaptor(); }
@@ -494,6 +517,8 @@ auto quit() -> void
     alternate = false;
     left_dir = right_dir = direction::NONE;
     trigger_down.fill( false );
+    trigger_require_release.fill( false );
+    input_suspended = false;
     require_center.fill( false );
     selected_target.reset();
     world_refresh = true;
@@ -537,11 +562,13 @@ auto start_repeat( int button, const input_event &event ) -> void
 }
 auto tick() -> bool
 {
-    if( !is_active() || alternate ) { return false; }
+    if( !is_active() || alternate || input_suspended ) { return false; }
     const auto due = repeats.take_due( SDL_GetTicks() );
     if( !due ) { return false; }
-    send( due->control == PAD_RT &&
-          left_dir != direction::NONE ? mapped( stick_code( left_dir, false ) ) : due->event );
+    // RT follows the current direction. Returning the stick to center must not
+    // keep repeating the direction captured when the trigger was first pressed.
+    send( due->control == PAD_RT ? mapped( left_dir != direction::NONE ?
+                                           stick_code( left_dir, false ) : PAD_RT ) : due->event );
     return true;
 }
 auto handle_event( const SDL_Event &event ) -> bool
@@ -561,12 +588,29 @@ auto handle_event( const SDL_Event &event ) -> bool
         if( controller && event.gdevice.which == SDL_GetGamepadID( controller ) ) { quit(); init(); }
         return true;
     }
+    if( event.type == SDL_EVENT_WINDOW_FOCUS_LOST || event.type == SDL_EVENT_WINDOW_MINIMIZED ) {
+        reset_inputs();
+        input_suspended = true;
+        return false;
+    }
+    if( event.type == SDL_EVENT_WINDOW_FOCUS_GAINED ) {
+        reset_inputs();
+        input_suspended = false;
+        return false;
+    }
     if( !controller ) { return false; }
+    if( input_suspended && ( event.type == SDL_EVENT_GAMEPAD_AXIS_MOTION ||
+                             event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN ||
+                             event.type == SDL_EVENT_GAMEPAD_BUTTON_UP ) ) { return true; }
     if( event.type == SDL_EVENT_GAMEPAD_AXIS_MOTION ) {
         if( event.gaxis.which != SDL_GetGamepadID( controller ) ) { return true; }
         const auto axis = event.gaxis.axis;
         if( axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER || axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER ) {
             const auto index = axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER ? 0 : 1;
+            if( trigger_require_release[index] ) {
+                if( event.gaxis.value <= 14000 ) { trigger_require_release[index] = false; }
+                return true;
+            }
             const auto down = trigger_down[index] ? event.gaxis.value > 14000 : event.gaxis.value > 18000;
             if( down == trigger_down[index] ) { return true; }
             trigger_down[index] = down;
@@ -708,10 +752,15 @@ auto show_bindings( const input_context &ctxt ) -> bool
     menu.text = _( "LT + ☰: shortcuts · Ⓐ: select · Ⓑ: back" );
     menu.addentry( 0, true, 'k', _( "Keyboard bindings" ) );
     auto actions = std::vector<std::string> {};
+    auto hints = std::map<std::string, std::string> {};
+    for( const auto &hint : context_hints( ctxt ) ) {
+        auto &label = hints[hint.action];
+        label += ( label.empty() ? "" : " / " ) + hint.symbol;
+    }
     for( const auto &action : ctxt.get_registered_actions_copy() ) {
         if( action == "ANY_INPUT" || action == "COORDINATE" || action == "MOUSE_MOVE" ||
             action == "HELP_KEYBINDINGS" ) { continue; }
-        const auto hint = action_hint( ctxt, action );
+        const auto &hint = hints[action];
         actions.push_back( action );
         menu.addentry( static_cast<int>( actions.size() ), true, 0,
                        ( hint.empty() ? _( "No direct controller binding" ) : hint ) + "  " +

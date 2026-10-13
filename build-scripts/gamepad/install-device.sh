@@ -13,8 +13,8 @@ case "$device" in
     *) echo 'Usage: install-device.sh [desktop|small|auto]' >&2; exit 2 ;;
 esac
 mkdir -p "$root/profile/config" "$root/profile/save" "$root/profile/memorial"
-for file in options.json fonts.json; do
-    if [[ ! -e "$root/profile/config/$file" ]]; then
+for file in options.json fonts.json panel_options.json; do
+    if [[ ! -e "$root/profile/config/$file" && -e "$root/presets/$device/config/$file" ]]; then
         cp "$root/presets/$device/config/$file" "$root/profile/config/$file"
     fi
 done

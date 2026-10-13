@@ -139,6 +139,7 @@ TEST_CASE("controller world direction preview does not move or spend a turn", "[
         REQUIRE(SDL_SetJoystickVirtualAxis(joystick, SDL_GAMEPAD_AXIS_LEFTX, axes.x));
         REQUIRE(SDL_SetJoystickVirtualAxis(joystick, SDL_GAMEPAD_AXIS_LEFTY, axes.y));
         SDL_UpdateJoysticks();
+        SDL_FlushEvent(SDL_EVENT_GAMEPAD_AXIS_MOTION);
         auto event = SDL_Event{};
         event.type = SDL_EVENT_GAMEPAD_AXIS_MOTION;
         event.gaxis.which = id;
@@ -301,7 +302,9 @@ TEST_CASE("controller repeat schedules are independent and match CDDA cadence", 
     repeats.start({.control = PAD_RT, .event = rt, .now = 1000});
     repeats.start({.control = PAD_RS, .event = rs, .now = 1050});
     CHECK_FALSE(repeats.take_due(1399));
-    REQUIRE(repeats.take_due(1400)->control == PAD_RT);
+    const auto initial = repeats.take_due(1400);
+    REQUIRE(initial);
+    CHECK(initial->control == PAD_RT);
     CHECK_FALSE(repeats.take_due(1449));
     const auto first = repeats.take_due(1450);
     const auto second = repeats.take_due(1450);
@@ -354,4 +357,90 @@ TEST_CASE(
     CHECK(gamepad::take_action(second).empty());
     CHECK(gamepad::take_action(first).empty());
 }
+TEST_CASE(
+    "controller trigger repeat follows centering and focus never resumes held input",
+    "[controller]") {
+    REQUIRE(SDL_InitSubSystem(SDL_INIT_GAMEPAD));
+    auto desc = SDL_VirtualJoystickDesc{};
+    SDL_INIT_INTERFACE(&desc);
+    desc.type = SDL_JOYSTICK_TYPE_GAMEPAD;
+    desc.naxes = SDL_GAMEPAD_AXIS_COUNT;
+    desc.nbuttons = SDL_GAMEPAD_BUTTON_COUNT;
+    desc.name = "Controller focus test";
+    const auto id = SDL_AttachVirtualJoystick(&desc);
+    REQUIRE(id != 0);
+    auto* joystick = SDL_OpenJoystick(id);
+    REQUIRE(joystick);
+    gamepad::quit();
+    gamepad::init();
+    REQUIRE(gamepad::is_active());
+    auto ctxt = input_context("DEFAULTMODE");
+    ctxt.register_directions();
+    ctxt.register_action("pause");
+    ctxt.register_action("main_menu");
+    const auto scope = gamepad::context_scope(ctxt);
+    const auto axis = [&](SDL_GamepadAxis code, Sint16 value) {
+        const auto raw =
+            code == SDL_GAMEPAD_AXIS_LEFT_TRIGGER || code == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER
+                ? static_cast<Sint16>(static_cast<int>(value) * 2 - 32768)
+                : value;
+        REQUIRE(SDL_SetJoystickVirtualAxis(joystick, code, raw));
+        SDL_UpdateJoysticks();
+        SDL_FlushEvent(SDL_EVENT_GAMEPAD_AXIS_MOTION);
+        auto event = SDL_Event{};
+        event.type = SDL_EVENT_GAMEPAD_AXIS_MOTION;
+        event.gaxis.which = id;
+        event.gaxis.axis = code;
+        event.gaxis.value = value;
+        REQUIRE(gamepad::handle_event(event));
+    };
+    axis(SDL_GAMEPAD_AXIS_LEFTY, -26000);
+    axis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, 26000);
+    SDL_Delay(410);
+    CHECK(ctxt.handle_input(0) == "UP");
+    axis(SDL_GAMEPAD_AXIS_LEFTY, 0);
+    SDL_Delay(60);
+    CHECK(ctxt.handle_input(0) == "pause");
+    // Leave release queued until after the repeat deadline. It takes priority
+    // over a due repeat, even when the previous world turn took over 50ms.
+    REQUIRE(SDL_SetJoystickVirtualAxis(joystick, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, -32768));
+    SDL_UpdateJoysticks();
+    SDL_Delay(60);
+    CHECK(ctxt.handle_input(1) == "TIMEOUT");
+    axis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, 26000);
+    axis(SDL_GAMEPAD_AXIS_LEFTY, -26000);
+    axis(SDL_GAMEPAD_AXIS_LEFT_TRIGGER, 26000);
+    axis(SDL_GAMEPAD_AXIS_RIGHTX, 26000);
+    CHECK(gamepad::radial_input_captured());
+    auto event = SDL_Event{};
+    event.type = SDL_EVENT_WINDOW_FOCUS_LOST;
+    CHECK_FALSE(gamepad::handle_event(event));
+    CHECK_FALSE(gamepad::tick());
+    CHECK_FALSE(gamepad::is_alt_held());
+    CHECK_FALSE(gamepad::radial_input_captured());
+    CHECK_FALSE(gamepad::world_preview_visible());
+    event.type = SDL_EVENT_WINDOW_FOCUS_GAINED;
+    CHECK_FALSE(gamepad::handle_event(event));
+    axis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, 26000);
+    axis(SDL_GAMEPAD_AXIS_LEFT_TRIGGER, 26000);
+    axis(SDL_GAMEPAD_AXIS_LEFTY, -26000);
+    CHECK_FALSE(gamepad::tick());
+    CHECK_FALSE(gamepad::is_alt_held());
+    CHECK(gamepad::get_left_stick_direction() == gamepad::direction::NONE);
+    axis(SDL_GAMEPAD_AXIS_LEFT_TRIGGER, 0);
+    axis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, 0);
+    axis(SDL_GAMEPAD_AXIS_LEFTY, 0);
+    axis(SDL_GAMEPAD_AXIS_RIGHTX, 0);
+    axis(SDL_GAMEPAD_AXIS_LEFTY, -26000);
+    axis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER, 26000);
+    SDL_Delay(410);
+    CHECK(ctxt.handle_input(0) == "UP");
+    event.type = SDL_EVENT_WINDOW_MINIMIZED;
+    CHECK_FALSE(gamepad::handle_event(event));
+    CHECK_FALSE(gamepad::tick());
+    gamepad::quit();
+    SDL_CloseJoystick(joystick);
+    SDL_DetachVirtualJoystick(id);
+}
+
 #endif

@@ -171,3 +171,13 @@ rg -C2 -i 'speedway' lang/po/ko.po | rg -v '^(#:|--)' | head -n 20
 - Direction prompts reuse `DEFAULTMODE` without registering gameplay actions. Classify menu routing from the registered actions too, or B remains a gameplay grab event instead of cancelling the prompt.
 
 - Controller smoke fixtures must validate the entered screen and keep synthesized press/release pairs consistent; timestamp-dependent menu conversion must include the release event, otherwise a held stick can silently choose a different new-game path.
+
+- Trigger movement repeat must resolve the current stick direction on every repeat, including centered state; never retain the direction captured on trigger press. Clear held input and pending wheel actions on focus loss, and require held triggers/sticks to release/center before resuming.
+
+- Poll queued physical release/focus events before emitting scheduled repeats. Prioritizing repeat deadlines can starve the event queue when a game turn takes longer than the repeat interval.
+
+- SDL virtual joystick trigger axes use signed joystick range: release is -32768, mapped by SDL to gamepad trigger 0. Keep injected event values consistent with SDL_GetGamepadAxis when testing focus/release behavior.
+
+- Use a positive handle_input timeout when asserting absence of input. handle_input(0) polls without synthesizing TIMEOUT and can loop indefinitely when no registered action arrives.
+
+- BN CLI directory arguments are concatenated literally: pass trailing slashes for --userdir, --configdir and --savedir. Check actual screenshot dimensions and loaded option files; otherwise the fixture silently uses fallback defaults and cannot validate the requested display preset. Preserve conditional vehicle/mana panels when reordering sidebar presets.

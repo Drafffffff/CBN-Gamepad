@@ -110,3 +110,9 @@ msgstr "LT + ☰ 按键列表 · Ⓐ 选择 · Ⓑ 返回"
 
 msgid "Advanced Inventory Manager"
 msgstr "高级物品管理"
+
+msgid "Interact"
+msgstr "邻格交互"
+
+msgid "Actions for this tile"
+msgstr "此格可用操作"
