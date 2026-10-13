@@ -276,8 +276,7 @@ static void WinCreate()
         SDL_GetWindowSize( ::window.get(), &WindowWidth, &WindowHeight );
         // Ignore previous values, use the whole window, but nothing more.
         TERMINAL_WIDTH = WindowWidth / fontwidth / scaling_factor;
-        TERMINAL_HEIGHT = std::max( 16,
-                                    WindowHeight / fontheight / scaling_factor - ( gamepad::is_active() ? 2 : 0 ) );
+        TERMINAL_HEIGHT = std::max( 16, WindowHeight / fontheight / scaling_factor );
     }
 #endif
     // Initialize framebuffer caches
@@ -371,7 +370,8 @@ static void WinCreate()
     }
 
     gamepad::init();
-    if( gamepad::is_active() ) { TERMINAL_HEIGHT = std::max( 16, TERMINAL_HEIGHT - 2 ); }
+    TERMINAL_HEIGHT = std::max( 16,
+                                WindowHeight / fontheight / scaling_factor - ( gamepad::is_active() ? 2 : 0 ) );
 
     // Initialize joysticks.
     int numjoy = 0;
@@ -2113,12 +2113,13 @@ static int sdl_keysym_to_curses( const SDL_Keycode sym, const SDL_Keymod mod )
 
 bool handle_resize( int w, int h )
 {
-    if( ( w != WindowWidth ) || ( h != WindowHeight ) ) {
+    const auto content_height = std::max( 16,
+                                          h / fontheight / scaling_factor - ( gamepad::is_active() ? 2 : 0 ) );
+    if( ( w != WindowWidth ) || ( h != WindowHeight ) || TERMINAL_HEIGHT != content_height ) {
         WindowWidth = w;
         WindowHeight = h;
         TERMINAL_WIDTH = WindowWidth / fontwidth / scaling_factor;
-        TERMINAL_HEIGHT = std::max( 16,
-                                    WindowHeight / fontheight / scaling_factor - ( gamepad::is_active() ? 2 : 0 ) );
+        TERMINAL_HEIGHT = content_height;
         need_invalidate_framebuffers = true;
         catacurses::stdscr = catacurses::newwin( TERMINAL_HEIGHT, TERMINAL_WIDTH, point_zero );
         throwErrorIf( !SetupRenderTarget(), "SetupRenderTarget failed" );
@@ -3229,6 +3230,10 @@ static void CheckMessages()
 
     while( SDL_PollEvent( &ev ) ) {
         if( gamepad::handle_event( ev ) ) {
+            if( ::window && ( ev.type == SDL_EVENT_GAMEPAD_ADDED ||
+                              ev.type == SDL_EVENT_GAMEPAD_REMOVED ) ) {
+                handle_resize( WindowWidth, WindowHeight );
+            }
             needupdate = true;
             // Deliver each routed controller press before later SDL events can replace it.
             if( last_input.type != input_event_t::error ) { break; }

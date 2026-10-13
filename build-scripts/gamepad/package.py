@@ -12,6 +12,7 @@ import tempfile
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--runtime-root', type=Path, required=True)
 parser.add_argument('--source-commit', required=True)
+parser.add_argument('--compiled-cpp-commit', required=True)
 parser.add_argument('--output', type=Path, required=True)
 parser.add_argument('--version', default='0.1.0')
 args = parser.parse_args()
@@ -35,7 +36,7 @@ with tempfile.TemporaryDirectory(prefix='cbn-release-') as temporary:
     manifest = {
         'version': args.version, 'upstream_release': 'v0.13.0',
         'source_commit': args.source_commit,
-        'compiled_cpp_commit': '5425140a26749f7ab68ded5734806df81eacc85b',
+        'compiled_cpp_commit': args.compiled_cpp_commit,
         'binary_sha256': hashlib.sha256((root / 'app/cataclysm-bn-tiles').read_bytes()).hexdigest(),
         'controller_tests': {'cases': 10, 'assertions': 2231},
         'tested_on': ['Bazzite, Steam, 3840x2160'],

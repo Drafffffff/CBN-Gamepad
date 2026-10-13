@@ -181,3 +181,7 @@ rg -C2 -i 'speedway' lang/po/ko.po | rg -v '^(#:|--)' | head -n 20
 - Use a positive handle_input timeout when asserting absence of input. handle_input(0) polls without synthesizing TIMEOUT and can loop indefinitely when no registered action arrives.
 
 - BN CLI directory arguments are concatenated literally: pass trailing slashes for --userdir, --configdir and --savedir. Check actual screenshot dimensions and loaded option files; otherwise the fixture silently uses fallback defaults and cannot validate the requested display preset. Preserve conditional vehicle/mana panels when reordering sidebar presets.
+
+- Reserve controller footer space after hotplug as well as initial startup and resize. Test with no controller at launch, connect after loading, and inspect the last visible log line. CDDA's right-stick cursor marks the shifted view center, while its left-stick cursor selects an adjacent interaction tile; preserve those distinct actions when improving visual priority.
+
+- Hotplug layout refresh requires an existing SDL window. Headless controller tests initialize SDL gamepads without font/window state, so never divide by font/scaling metrics in that path.
